@@ -1,10 +1,12 @@
 
+path = "/Users/christianbaehr/Box Sync/demining/inputData"
+
 import itertools
 import rasterio
 from shapely.geometry import box
 import geopandas as gpd
 
-sample_raster = "/Users/christianbaehr/Downloads/dmsp_afg_1992.tif"
+sample_raster = path+"/ntl/dmsp_afg_1992.tif"
 
 #Create rectangles using shapely
 with rasterio.open(sample_raster) as dataset:
@@ -34,7 +36,7 @@ for x,y in indices:
 #Combine in a GeoDataFrame using geopandas
 gdf = gpd.GeoDataFrame(data=data_list, crs="epsg:4326", geometry=polygons, columns=['value'])
 
-mask = gpd.read_file("/Users/christianbaehr/Downloads/gadm36_AFG_2.geojson")
+mask = gpd.read_file(path+"/gadm36_AFG_2.geojson")
 
 gdf2 = gpd.clip(gdf, mask)
 
@@ -47,9 +49,9 @@ gdf2["cell_id"] = gdf2.index+1
 
 gdf3 = gdf2[["cell_id", "longitude", "latitude", "geometry"]]
 
-gdf3.to_file("/Users/christianbaehr/Downloads/empty_grid_afg.geojson", driver="GeoJSON")
+gdf3.to_file(path+"/empty_grid_afg.geojson", driver="GeoJSON")
 
-gdf3.drop(["geometry"], axis=1).to_csv("/Users/christianbaehr/Downloads/empty_grid_afg.csv", index=False)
+gdf3.drop(["geometry"], axis=1).to_csv(path+"/empty_grid_afg.csv", index=False)
 
 
 
