@@ -65,7 +65,6 @@ reghdfe ntl c.cha_cleared##c.cha_road_blockage  [aw=pct_area], absorb(cell_id ye
 outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
 
 
-
 reghdfe popcount cha_cleared [aw=pct_area], absorb(absorb_temp) cluster(district_id year)
 outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", N, "Year FEs", N)
 
@@ -141,6 +140,10 @@ outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(Pop. cou
 
 reghdfe popcount c.all_cleared##c.any_road_blockage [aw=pct_area], absorb(cell_id year) cluster(district_id year)
 outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
+
+reghdfe popcount c.all_cleared##c.baseline_pop [aw=pct_area], absorb(cell_id year) cluster(district_id year)
+outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
+
 
 rm "$results/main_models_all.txt"
 
@@ -270,8 +273,10 @@ coefplot, keep(*.yrtodem_p) drop(0.yrtodem_p) xline(10.5) yline(0) vertical omit
 
 drop cell_id gid_1 name_1 gid_2 name_2
 
-ds district_id year popcount, not
-collapse (mean) `r(varlist)' (sum) popcount, by(district_id year)
+ds district_id year popcount baseline_pop, not
+collapse (mean) `r(varlist)' (sum) popcount baseline_pop, by(district_id year)
+
+replace any_road_blockage = 1 if any_road_blockage>0 & !missing(any_road_blockage)
 
 su
 
@@ -293,6 +298,9 @@ outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(
 reghdfe ntl c.cha_cleared##c.cha_road_blockage [aw=pct_area], absorb(district_id year) cluster(province_id year)
 outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
 
+reghdfe ntl c.cha_cleared##c.baseline_pop [aw=pct_area], absorb(district_id year) cluster(province_id year)
+outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
+
 
 
 reghdfe popcount cha_cleared [aw=pct_area], absorb(absorb_temp) cluster(province_id year)
@@ -307,12 +315,15 @@ outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(
 reghdfe popcount c.cha_cleared##c.cha_road_blockage [aw=pct_area], absorb(district_id year) cluster(province_id year)
 outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
 
+reghdfe popcount c.cha_cleared##c.baseline_pop [aw=pct_area], absorb(district_id year) cluster(province_id year)
+outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
+
 rm "$results/main_models_cha_commune.txt"
 
 
 ***
 
-* CHA only results - district level
+* SHA only results - district level
 reghdfe ntl sha_cleared [aw=pct_area], absorb(absorb_temp) cluster(province_id year)
 outreg2 using "$results/main_models_sha_district.doc", replace noni nocons ctitle(NTL) addtext("Grid cell FEs", N, "Year FEs", N)
 
@@ -343,7 +354,7 @@ rm "$results/main_models_sha_district.txt"
 
 ***
 
-* CHA only results - district level
+* results considering both SHA and CHA - district level
 reghdfe ntl all_cleared [aw=pct_area], absorb(absorb_temp) cluster(province_id year)
 outreg2 using "$results/main_models_all_district.doc", replace noni nocons ctitle(NTL) addtext("Grid cell FEs", N, "Year FEs", N)
 
@@ -356,6 +367,8 @@ outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle
 reghdfe ntl c.all_cleared##c.any_road_blockage [aw=pct_area], absorb(district_id year) cluster(province_id year)
 outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
 
+reghdfe ntl c.all_cleared##c.baseline_pop [aw=pct_area], absorb(district_id year) cluster(province_id year)
+outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
 
 
 reghdfe popcount all_cleared [aw=pct_area], absorb(absorb_temp) cluster(province_id year)
@@ -368,6 +381,9 @@ reghdfe popcount all_cleared [aw=pct_area], absorb(district_id year) cluster(pro
 outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
 
 reghdfe popcount c.all_cleared##c.any_road_blockage [aw=pct_area], absorb(district_id year) cluster(province_id year)
+outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
+
+reghdfe popcount c.all_cleared##c.baseline_pop [aw=pct_area], absorb(district_id year) cluster(province_id year)
 outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
 
 rm "$results/main_models_all_district.txt"
