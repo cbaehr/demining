@@ -41,7 +41,6 @@ grid = grid.merge(temp, how="left", on="cell_id")
 
 ###
 
-grid = pd.read_csv(path+"/pre_panel.csv")
 
 hazard_polygons = gpd.read_file(path+"/hazard_polygons.geojson")
 hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Typ"].isin(["MineField", "Suspected Minefield", "Converted From SHA"]), :]
@@ -194,6 +193,26 @@ for i in [2000, 2005, 2010, 2015, 2020]:
 	density_ras = rasterio.open(path+"/pop/pop_density/gpw_popdensity_resample_"+str(i)+".tif")
 	density_col = [k[0] for k in density_ras.sample(coords)]
 	grid["popdensity"+str(i)] = density_col
+
+###
+
+from rasterstats import zonal_stats
+
+a = zonal_stats(path+"/empty_grid_afg_trimmed.geojson", path+"/distance_starts_roads.tif", stats=["mean"])
+b = pd.DataFrame(a)
+b.columns = ["distance_to_road"]
+grid = pd.concat([grid, b], axis=1)
+
+###
+
+
+
+
+###
+
+grid = pd.read_csv(path+"/pre_panel.csv")
+
+
 
 ###
 
