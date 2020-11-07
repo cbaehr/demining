@@ -6,6 +6,8 @@ import geopandas as gpd
 import rasterio
 import pandas as pd
 from shapely.geometry import Point, shape
+from rasterstats import zonal_stats
+
 
 empty_grid = gpd.read_file(path+"/empty_grid_afg_trimmed.geojson")
 coords = [(x,y) for x, y in zip(empty_grid.longitude, empty_grid.latitude)]
@@ -195,8 +197,6 @@ for i in [2000, 2005, 2010, 2015, 2020]:
 	grid["popdensity"+str(i)] = density_col
 
 ###
-
-from rasterstats import zonal_stats
 
 a = zonal_stats(path+"/empty_grid_afg_trimmed.geojson", path+"/distance_starts_roads.tif", stats=["mean"])
 b = pd.DataFrame(a)

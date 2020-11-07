@@ -22,6 +22,10 @@ gen time_to_sha_clearance = (year - sha_clearance_year)
 gen sha_cleared = (time_to_sha_clearance >= 0) & !missing(sha_clearance_year)
 replace sha_cleared = 1 if has_sha==0
 
+gen all_clearance_yr = max(cha_clearance_year, sha_clearance_year)
+gen time_to_all_clearance = (year-all_clearance_yr)
+* gen all_cleared = (time_to_all_clearance >= 0) & !missing(all_clearance_yr)
+
 gen all_cleared = (cha_cleared * sha_cleared)
 
 gen any_road_blockage = (cha_road_blockage + sha_road_blockage) > 0
@@ -76,6 +80,9 @@ outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(NTL) add
 reghdfe ntl c.cha_cleared##c.distance_to_road  [aw=pct_area_cha], absorb(cell_id year_province) cluster(district_id year)
 outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
+reghdfe ntl c.cha_cleared##c.baseline_pop  [aw=pct_area_cha], absorb(cell_id year_province) cluster(district_id year)
+outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+
 
 reghdfe log_popcount cha_cleared [aw=pct_area_cha], absorb(absorb_temp) cluster(district_id year)
 outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
@@ -127,6 +134,9 @@ reghdfe ntl sha_cleared [aw=pct_area_sha], absorb(cell_id year_province) cluster
 outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
 reghdfe ntl c.sha_cleared##c.distance_to_road  [aw=pct_area_sha], absorb(cell_id year_province) cluster(district_id year)
+outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+
+reghdfe ntl c.sha_cleared##c.baseline_pop  [aw=pct_area_sha], absorb(cell_id year_province) cluster(district_id year)
 outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
 
@@ -183,6 +193,9 @@ outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(NTL) add
 reghdfe ntl c.all_cleared##c.distance_to_road  [aw=pct_area], absorb(cell_id year_province) cluster(district_id year)
 outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
+reghdfe ntl c.all_cleared##c.baseline_pop  [aw=pct_area], absorb(cell_id year_province) cluster(district_id year)
+outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+
 
 reghdfe log_popcount all_cleared [aw=pct_area], absorb(absorb_temp) cluster(district_id year)
 outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
@@ -225,6 +238,50 @@ xtile q_baseline_pop = baseline_pop, nq(5)
 reghdfe ntl ibn.q_baseline_pop#c.all_cleared, absorb(cell_id year_province) cluster(district_id year)
 
 coefplot, keep(*.q_baseline_pop#c.all_cleared) vertical yline(0) graphregion(color(white)) legend(off)
+
+***
+
+* replace time_to_all_clearance = time_to_all_clearance+30
+
+* replace time_to_all_clearance = . if time_to_all_clearance>40 | time_to_all_clearance<20
+
+gen test = time_to_all_clearance
+replace test = test+30
+replace test = 20 if test<20 & !missing(test)
+replace test = 40 if test>40 & !missing(test)
+
+
+
+reghdfe ntl ib30.test if year<=2013 & all_clearance_yr<=2013, absorb(cell_id year) cluster(district_id year)
+
+coefplot, keep(*.test) vertical omit recast(line) ciopts(recast(rline) color(blue) lp(dash))
+
+
+
+
+
+
+
+
+egen yrtodem_p = cut(yrtodem), at(-30 -10(1)13)
+levelsof yrtodem_p, loc(levels) sep()
+foreach l of local levels{
+	local j = `l' + 30
+	local label `"`label' `j' "`l'" "'
+	} 
+cap la drop yrtodem_p	
+la def  yrtodem_p `label'
+
+replace yrtodem_p = yrtodem_p + 30
+la values  yrtodem_p yrtodem_p
+
+
+reghdfe maxl_ ib30.yrtodem_p `climate' i.year, cluster(reu_id year) absorb(reu_id)
+
+coefplot, keep(*.yrtodem_p) drop(0.yrtodem_p) xline(10.5) yline(0) vertical omit   recast(line) color(blue) ciopts(recast(rline)  color(blue) lp(dash) ) graphregion(color(white)) bgcolor(white)  ///
+	xtitle("Years to demarcation") ytitle("Treatment effects on NDVI")
+graph save Graph "C:\Users\Ariel\Dropbox\AidData\KfW\Paper\Data\Years-to-demarcation community FE.gph", replace
+
 
 
 
@@ -433,6 +490,9 @@ reghdfe ntl all_cleared [aw=pct_area], absorb(year_province) cluster(province_id
 outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", N, "Year FEs", Y)
 
 reghdfe ntl all_cleared [aw=pct_area], absorb(district_id year) cluster(province_id year)
+outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
+
+reghdfe ntl all_cleared [aw=pct_area], absorb(district_id year_province) cluster(province_id year)
 outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
 
 reghdfe ntl c.all_cleared##c.distance_to_road [aw=pct_area], absorb(district_id year) cluster(province_id year)
