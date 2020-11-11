@@ -52,7 +52,7 @@ hazard_polygons = hazard_polygons[["OBJECTID", "Status_1", "Status_Cha", "Status
 ###
 
 # CHA
-cha = hazard_polygons.loc[hazard_polygons["Hazard_Cla"]=="CHA", :]
+cha = hazard_polygons.loc[hazard_polygons["Hazard_Cla"]=="CHA", : ]
 
 #cha = gpd.sjoin(empty_grid, cha[["OBJECTID", "Status_Cha", "geometry"]], how="left", op="intersects")
 cha_grid = gpd.sjoin(empty_grid, cha, how="left", op="intersects")

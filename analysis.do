@@ -235,11 +235,35 @@ rm "$results/main_models_all.txt"
 
 xtile q_baseline_pop = baseline_pop, nq(5)
 
-reghdfe ntl ibn.q_baseline_pop#c.all_cleared, absorb(cell_id year_province) cluster(district_id year)
+reghdfe ntl ibn.q_baseline_pop#c.all_cleared [aw=pct_area], absorb(cell_id year_province) cluster(district_id year)
 
-coefplot, keep(*.q_baseline_pop#c.all_cleared) vertical yline(0) graphregion(color(white)) legend(off)
+coefplot, keep(*.q_baseline_pop#c.all_cleared) vertical yline(0) graphregion(color(white)) legend(off) xtitle("Baseline population count (quintile)") ytitle("Effect on NTL") rename(1.q_baseline_pop#c.all_cleared = 1 2.q_baseline_pop#c.all_cleared = 2 3.q_baseline_pop#c.all_cleared = 3 4.q_baseline_pop#c.all_cleared = 4 5.q_baseline_pop#c.all_cleared = 5) saving("$results/baseline_pop_quintile", replace)
 
 ***
+
+xtile q_distance_to_road = distance_to_road, nq(5)
+
+reghdfe ntl ibn.q_distance_to_road#c.all_cleared [aw=pct_area], absorb(cell_id year_province) cluster(district_id year)
+
+coefplot, keep(*.q_distance_to_road#c.all_cleared) vertical yline(0) graphregion(color(white)) legend(off) xtitle("Distance to road (quintile)") ytitle("Effect on NTL") rename(1.q_distance_to_road#c.all_cleared = 1 2.q_distance_to_road#c.all_cleared = 2 3.q_distance_to_road#c.all_cleared = 3 4.q_distance_to_road#c.all_cleared = 4 5.q_distance_to_road#c.all_cleared = 5) saving("$results/distance_to_road_quintile", replace)
+
+***
+
+xtile q_pct_area = pct_area, nq(5)
+
+reghdfe ntl ibn.q_pct_area#c.all_cleared, absorb(cell_id year_province) cluster(district_id year)
+
+coefplot, keep(*.q_pct_area#c.all_cleared) vertical yline(0) graphregion(color(white)) legend(off) xtitle("Distance to road (quintile)") ytitle("Effect on NTL")
+
+***
+
+egen cleared = mean(all_cleared), by(cell_id)
+gen cleared_dummy = (cleared>0)
+
+drop if time_to_all_clearance>0
+
+reghdfe cleared_dummy ntl, absorb(year) cluster(district_id year)
+
 
 * replace time_to_all_clearance = time_to_all_clearance+30
 

@@ -61,6 +61,7 @@ wave5["wave"] = "wave5"
 
 
 misti = pd.concat([wave1, wave2, wave3, wave4, wave5], axis=0)
+misti = misti.reset_index(drop=True)
 
 misti["survey_id"] = misti.index + 1
 
@@ -130,10 +131,9 @@ misti_geo = pd.concat([misti_geo, b], axis=1)
 
 ##########
 
+misti_geo[["survey_id", "geometry"]].to_file(path+"/misti/empty_grid_misti.geojson", driver="GeoJSON")
 
-misti_geo.to_file(path+"/misti/misti_panel.geojson", driver="GeoJSON")
-
-
+misti_geo.drop(["geometry"], axis=1).to_csv(path+"/misti/misti_panel.csv", index=False)
 
 
 
