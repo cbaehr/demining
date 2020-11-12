@@ -6,29 +6,20 @@ global results "/Users/christianbaehr/Box Sync/demining/Results"
 import delimited "$data/pre_panel.csv", clear
 
 * drop IHAs
-gen drop_iha = has_cha+has_sha
-drop if drop_iha==0
-
-reshape long ntl popcount popdensity, i(cell_id) j(year)
+reshape long ntl popcount popdensity ha_count, i(cell_id) j(year)
 
 gen log_popcount = log(popcount)
 gen log_popdensity = log(popdensity)
 
-gen time_to_cha_clearance = (year - cha_clearance_year)
-gen cha_cleared = (time_to_cha_clearance >= 0) & !missing(cha_clearance_year)
-replace cha_cleared = 1 if has_cha==0
+gen all_cleared = (ha_count==0)
 
-gen time_to_sha_clearance = (year - sha_clearance_year)
-gen sha_cleared = (time_to_sha_clearance >= 0) & !missing(sha_clearance_year)
-replace sha_cleared = 1 if has_sha==0
+*gen time_to_cha_clearance = (year - cha_clearance_year)
+*gen cha_cleared = (time_to_cha_clearance >= 0) & !missing(cha_clearance_year)
+*replace cha_cleared = 1 if has_cha==0
 
-gen all_clearance_yr = max(cha_clearance_year, sha_clearance_year)
-gen time_to_all_clearance = (year-all_clearance_yr)
+*gen all_clearance_yr = max(cha_clearance_year, sha_clearance_year)
+*gen time_to_all_clearance = (year-all_clearance_yr)
 * gen all_cleared = (time_to_all_clearance >= 0) & !missing(all_clearance_yr)
-
-gen all_cleared = (cha_cleared * sha_cleared)
-
-gen any_road_blockage = (cha_road_blockage + sha_road_blockage) > 0
 
 *gen a = subinstr(cha_enddate, "-", "", .)
 *gen c = date(a, "YMD")
@@ -45,9 +36,14 @@ egen province_id = group(gid_1)
 
 egen year_province = group(year province_id)
 
-gen absorb_temp=1
 
 replace distance_to_road = distance_to_road / 1000
+
+bys cell_id (year): gen cleared_by_2013 = all_cleared[22]
+su ntl if cleared_by_2013==1
+su ntl if cleared_by_2013==0
+
+bys cleared_by_2013: su all_cleared if year==2013
 
 *egen a = mean(cha_trt), by(cell_id)
 *egen b = mean(sha_trt), by(cell_id)
@@ -56,6 +52,8 @@ replace distance_to_road = distance_to_road / 1000
 
 bysort cell_id (year): gen baseline_pop = popdensity[9]
 
+gen absorb_temp=1
+
 *export delimited "$data/panel.csv", replace
 
 outreg2 using "$results/summary_statistics_1km.doc", replace sum(log)
@@ -63,172 +61,62 @@ rm "$results/summary_statistics_1km.txt"
 
 ***************************************************************
 
-* CHA only results
 
-reghdfe ntl cha_cleared [aw=pct_area_cha], absorb(absorb_temp) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", replace noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
-
-reghdfe ntl cha_cleared [aw=pct_area_cha], absorb(year) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
-
-reghdfe ntl cha_cleared [aw=pct_area_cha], absorb(cell_id year) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
-
-reghdfe ntl cha_cleared [aw=pct_area_cha], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
-
-reghdfe ntl c.cha_cleared##c.distance_to_road  [aw=pct_area_cha], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
-
-reghdfe ntl c.cha_cleared##c.baseline_pop  [aw=pct_area_cha], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
-
-
-reghdfe log_popcount cha_cleared [aw=pct_area_cha], absorb(absorb_temp) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
-
-reghdfe log_popcount cha_cleared [aw=pct_area_cha], absorb(year) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
-
-reghdfe log_popcount cha_cleared [aw=pct_area_cha], absorb(cell_id year) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
-
-reghdfe log_popcount cha_cleared [aw=pct_area_cha], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
-
-reghdfe log_popcount c.cha_cleared##c.distance_to_road  [aw=pct_area_cha], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
-
-
-reghdfe log_popdensity cha_cleared [aw=pct_area_cha], absorb(absorb_temp) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
-
-reghdfe log_popdensity cha_cleared [aw=pct_area_cha], absorb(year) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
-
-reghdfe log_popdensity cha_cleared [aw=pct_area_cha], absorb(cell_id year) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
-
-reghdfe log_popdensity cha_cleared [aw=pct_area_cha], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
-
-reghdfe log_popdensity c.cha_cleared##c.distance_to_road  [aw=pct_area_cha], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_cha.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
-
-rm "$results/main_models_cha.txt"
-
-***
-
-* SHA only results
-
-reghdfe ntl sha_cleared [aw=pct_area_sha], absorb(absorb_temp) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", replace noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
-
-reghdfe ntl sha_cleared [aw=pct_area_sha], absorb(year) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
-
-reghdfe ntl sha_cleared [aw=pct_area_sha], absorb(cell_id year) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
-
-reghdfe ntl sha_cleared [aw=pct_area_sha], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
-
-reghdfe ntl c.sha_cleared##c.distance_to_road  [aw=pct_area_sha], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
-
-reghdfe ntl c.sha_cleared##c.baseline_pop  [aw=pct_area_sha], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
-
-
-reghdfe log_popcount sha_cleared [aw=pct_area_sha], absorb(absorb_temp) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
-
-reghdfe log_popcount sha_cleared [aw=pct_area_sha], absorb(year) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
-
-reghdfe log_popcount sha_cleared [aw=pct_area_sha], absorb(cell_id year) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
-
-reghdfe log_popcount sha_cleared [aw=pct_area_sha], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
-
-reghdfe log_popcount c.sha_cleared##c.distance_to_road  [aw=pct_area_sha], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
-
-
-reghdfe log_popdensity sha_cleared [aw=pct_area_sha], absorb(absorb_temp) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
-
-reghdfe log_popdensity sha_cleared [aw=pct_area_sha], absorb(year) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
-
-reghdfe log_popdensity sha_cleared [aw=pct_area_sha], absorb(cell_id year) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
-
-reghdfe log_popdensity sha_cleared [aw=pct_area_sha], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
-
-reghdfe log_popdensity c.sha_cleared##c.distance_to_road  [aw=pct_area_sha], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_sha.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
-
-rm "$results/main_models_sha.txt"
-
-***
-
-
-* all HA results
+* main results
 
 reghdfe ntl all_cleared [aw=pct_area], absorb(absorb_temp) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", replace noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
+outreg2 using "$results/main_models_ntl.doc", replace noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
 
 reghdfe ntl all_cleared [aw=pct_area], absorb(year) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(NTL) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
+outreg2 using "$results/main_models_ntl.doc", append noni nocons ctitle(NTL) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
 
 reghdfe ntl all_cleared [aw=pct_area], absorb(cell_id year) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(NTL) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
+outreg2 using "$results/main_models_ntl.doc", append noni nocons ctitle(NTL) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
 
 reghdfe ntl all_cleared [aw=pct_area], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+outreg2 using "$results/main_models_ntl.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
 reghdfe ntl c.all_cleared##c.distance_to_road  [aw=pct_area], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+outreg2 using "$results/main_models_ntl.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
 reghdfe ntl c.all_cleared##c.baseline_pop  [aw=pct_area], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+outreg2 using "$results/main_models_ntl.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+
+rm "$results/main_models_ntl.txt"
 
 
 reghdfe log_popcount all_cleared [aw=pct_area], absorb(absorb_temp) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
+outreg2 using "$results/main_models_pop.doc", replace noni nocons ctitle(ln(Pop. Count)) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
 
 reghdfe log_popcount all_cleared [aw=pct_area], absorb(year) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
+outreg2 using "$results/main_models_pop.doc", append noni nocons ctitle(ln(Pop. Count)) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
 
 reghdfe log_popcount all_cleared [aw=pct_area], absorb(cell_id year) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
+outreg2 using "$results/main_models_pop.doc", append noni nocons ctitle(ln(Pop. Count)) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
 
 reghdfe log_popcount all_cleared [aw=pct_area], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+outreg2 using "$results/main_models_pop.doc", append noni nocons ctitle(ln(Pop. Count)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
 reghdfe log_popcount c.all_cleared##c.distance_to_road  [aw=pct_area], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(log(Pop. Count)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+outreg2 using "$results/main_models_pop.doc", append noni nocons ctitle(ln(Pop. Count)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
 
 reghdfe log_popdensity all_cleared [aw=pct_area], absorb(absorb_temp) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
+outreg2 using "$results/main_models_pop.doc", append noni nocons ctitle(ln(Pop. Dens.)) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
 
 reghdfe log_popdensity all_cleared [aw=pct_area], absorb(year) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
+outreg2 using "$results/main_models_pop.doc", append noni nocons ctitle(ln(Pop. Dens.)) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
 
 reghdfe log_popdensity all_cleared [aw=pct_area], absorb(cell_id year) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
+outreg2 using "$results/main_models_pop.doc", append noni nocons ctitle(ln(Pop. Dens.)) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
 
 reghdfe log_popdensity all_cleared [aw=pct_area], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+outreg2 using "$results/main_models_pop.doc", append noni nocons ctitle(ln(Pop. Dens.)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
 reghdfe log_popdensity c.all_cleared##c.distance_to_road  [aw=pct_area], absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_all.doc", append noni nocons ctitle(log(Pop. Dens.)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+outreg2 using "$results/main_models_pop.doc", append noni nocons ctitle(ln(Pop. Dens.)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
-rm "$results/main_models_all.txt"
+rm "$results/main_models_pop.txt"
 
 
 ***************************************************************
@@ -251,169 +139,34 @@ coefplot, keep(*.q_distance_to_road#c.all_cleared) vertical yline(0) graphregion
 
 xtile q_pct_area = pct_area, nq(5)
 
-reghdfe ntl ibn.q_pct_area#c.all_cleared, absorb(cell_id year_province) cluster(district_id year)
+reghdfe ntl ibn.q_pct_area#c.all_cleared [aw=pct_area], absorb(cell_id year_province) cluster(district_id year)
 
-coefplot, keep(*.q_pct_area#c.all_cleared) vertical yline(0) graphregion(color(white)) legend(off) xtitle("Distance to road (quintile)") ytitle("Effect on NTL")
-
-***
-
-egen cleared = mean(all_cleared), by(cell_id)
-gen cleared_dummy = (cleared>0)
-
-drop if time_to_all_clearance>0
-
-reghdfe cleared_dummy ntl, absorb(year) cluster(district_id year)
-
-
-* replace time_to_all_clearance = time_to_all_clearance+30
-
-* replace time_to_all_clearance = . if time_to_all_clearance>40 | time_to_all_clearance<20
-
-gen test = time_to_all_clearance
-replace test = test+30
-replace test = 20 if test<20 & !missing(test)
-replace test = 40 if test>40 & !missing(test)
-
-
-
-reghdfe ntl ib30.test if year<=2013 & all_clearance_yr<=2013, absorb(cell_id year) cluster(district_id year)
-
-coefplot, keep(*.test) vertical omit recast(line) ciopts(recast(rline) color(blue) lp(dash))
-
-
-
-
-
-
-
-
-egen yrtodem_p = cut(yrtodem), at(-30 -10(1)13)
-levelsof yrtodem_p, loc(levels) sep()
-foreach l of local levels{
-	local j = `l' + 30
-	local label `"`label' `j' "`l'" "'
-	} 
-cap la drop yrtodem_p	
-la def  yrtodem_p `label'
-
-replace yrtodem_p = yrtodem_p + 30
-la values  yrtodem_p yrtodem_p
-
-
-reghdfe maxl_ ib30.yrtodem_p `climate' i.year, cluster(reu_id year) absorb(reu_id)
-
-coefplot, keep(*.yrtodem_p) drop(0.yrtodem_p) xline(10.5) yline(0) vertical omit   recast(line) color(blue) ciopts(recast(rline)  color(blue) lp(dash) ) graphregion(color(white)) bgcolor(white)  ///
-	xtitle("Years to demarcation") ytitle("Treatment effects on NDVI")
-graph save Graph "C:\Users\Ariel\Dropbox\AidData\KfW\Paper\Data\Years-to-demarcation community FE.gph", replace
-
-
-
-
+coefplot, keep(*.q_pct_area#c.all_cleared) vertical yline(0) graphregion(color(white)) legend(off) xtitle("Pct. area that is hazardous") ytitle("Effect on NTL")
 
 ***
 
-xtile q_count = cell_count_30m, nq(5)
-xtile q_pct_area = pct_area, nq(5)
+gen time_to_trt1 = year*all_cleared
+replace time_to_trt1=. if time_to_trt1==0
+egen time_to_trt2 = min(time_to_trt1), by(cell_id)
 
-reghdfe ntl ibn.q_pct_area#c.all_cleared, absorb(cell_id year_province) cluster(district_id year)
+gen time_to_trt3 = year-time_to_trt2
+replace time_to_trt3 = time_to_trt3+30
+replace time_to_trt3 = . if time_to_trt3<22
+replace time_to_trt3 = . if time_to_trt3>38
 
-coefplot, keep(*.q_pct_area#c.all_cleared) vertical yline(0) graphregion(color(white)) legend(off)
+reghdfe ntl ib30.time_to_trt3 [aw=pct_area], absorb(cell_id) cluster(district_id year)
+coefplot, keep(*.time_to_trt3) yline(0) vertical omit   recast(line) color(blue) ciopts(recast(rline)  color(blue) lp(dash) ) graphregion(color(white)) bgcolor(white) xtitle("Years to complete lhazard clearance") ytitle("Treatment effects on NTL") rename(22.time_to_trt3 = -8 23.time_to_trt3 = -7 24.time_to_trt3 = -6 25.time_to_trt3 = -5 26.time_to_trt3 = -4 27.time_to_trt3 = -3 28.time_to_trt3 = -2 29.time_to_trt3 = -1 30.time_to_trt3 = 0 31.time_to_trt3 = 1 32.time_to_trt3 = 2 33.time_to_trt3 = 3 34.time_to_trt3 = 4 35.time_to_trt3 = 5 36.time_to_trt3 = 6 37.time_to_trt3 = 7 38.time_to_trt3 = 8) saving("$results/event_study", replace)
 
+gen first_cleared = (total_ha-ha_count!=0) * year
+replace first_cleared=. if first_cleared==0
+egen first_cleared2 = min(first_cleared), by(cell_id)
+gen first_cleared3 = year-first_cleared2
+replace first_cleared3 = first_cleared3+30
+replace first_cleared3 = . if first_cleared3<22
+replace first_cleared3 = . if first_cleared3>38
 
-reghdfe ndvi ibn.q_count#c.(trt_overall_road trt_overall_irrigation trt_overall_else) temperature precipitation, absorb(cell_id year_province) cluster(commune_id year)
-
-* a)
-coefplot, keep(*.q_count#c.trt_overall_road) vertical yline(0) graphregion(color(white)) legend(off) xtitle("Quintile of share initially forested") ytitle("Effect of roads on NDVI") rename(1.q_count#c.trt_overall_road = 1 2.q_count#c.trt_overall_road = 2 3.q_count#c.trt_overall_road = 3 4.q_count#c.trt_overall_road = 4 5.q_count#c.trt_overall_road = 5) ylabel(-0.002(0.002)0.008) yscale(range(-0.002(0.002)0.008)) saving(figure4_a, replace)
-
-* b)
-coefplot, keep(*.q_count#c.trt_overall_irrigation) vertical yline(0) graphregion(color(white)) legend(off) xtitle("Quintile of share initially forested") ytitle("Effect of irrigation on NDVI") rename(1.q_count#c.trt_overall_irrigation = 1 2.q_count#c.trt_overall_irrigation = 2 3.q_count#c.trt_overall_irrigation = 3 4.q_count#c.trt_overall_irrigation = 4 5.q_count#c.trt_overall_irrigation = 5) ylabel(-0.002(0.002)0.008) yscale(range(-0.002(0.002)0.008)) saving(figure4_b, replace)
-
-reghdfe treecover ibn.q_count#c.(trt_overall_road trt_overall_irrigation trt_overall_else) temperature precipitation, absorb(cell_id year_province) cluster(commune_id year)
-
-
-
-
-***************************************************************
-
-gen time_to_cha_clearance_fac = time_to_cha_clearance + 40
-replace time_to_cha_clearance_fac = 30 if time_to_cha_clearance_fac<30
-replace time_to_cha_clearance_fac = 50 if time_to_cha_clearance_fac>50
-
-egen test = cut(time_to_cha_clearance), at(-30 -10(1)13)
-levelsof test, loc(levels) sep()
-foreach l of local levels {
-	local j = `l' + 30
-	local label `"`label' `j' "`l'" "'
-}
-
-cap la drop test
-la def test `label'
-
-replace test = test+30
-la values test test
-
-reghdfe ntl i.test, absorb(cell_id year_province) cluster(district_id year)
-estimate store e1
-coefplot, keep(*test) drop(0.test) vertical omit recast(line)
-
-
-
-egen yrtodem_p = cut(yrtodem), at(-30 -10(1)13)
-levelsof yrtodem_p, loc(levels) sep()
-foreach l of local levels{
-	local j = `l' + 30
-	local label `"`label' `j' "`l'" "'
-	} 
-cap la drop yrtodem_p	
-la def  yrtodem_p `label'
-
-replace yrtodem_p = yrtodem_p + 30
-la values  yrtodem_p yrtodem_p
-
-
-reghdfe maxl_ ib30.yrtodem_p `climate' i.year, cluster(reu_id year) absorb(reu_id)
-
-coefplot, keep(*.yrtodem_p) drop(0.yrtodem_p) xline(10.5) yline(0) vertical omit   recast(line) color(blue) ciopts(recast(rline)  color(blue) lp(dash) ) graphregion(color(white)) bgcolor(white)  ///
-	xtitle("Years to demarcation") ytitle("Treatment effects on NDVI")
-graph save Graph "C:\Users\Ariel\Dropbox\AidData\KfW\Paper\Data\Years-to-demarcation community FE.gph", replace
-
-
-
-
-
-
-
-
-
-
-
-forvalues i = -10/9 {
-	local labels `labels' `i'
-}
-
-display "`labels'"
-
-coefplot, keep(*.time_to_cha_clearance_fac) drop(50.time_to_cha_clearance_fac) vertical omit recast(line) color(blue) ciopts(recast(rline)  color(blue) lp(dash)) graphregion(color(white)) bgcolor(white) xtitle("Years to demarcation") ytitle("Treatment effects on NDVI") xscale(range(0 20)) byopts(xrescale) bycoefs bylabels("-10" "-9" "-8" "-7" "-6" "-5" "-4" "-3" "-2" "-1")
-
-bylabels(`labels')
-
-rename(30.time_to_cha_clearance_fac 30)
-
-xlabel(-10(1)9) xscale(range(30(1)49))
-
-yscale(range(-0.05(0.05)0.15))
-
-forvalues i = 70/73 {
-    regress ln_w grade age if year == `i'
-    estimates store year`i'
-    local allyears `allyears' year`i' ||
-    local labels `labels' `i'
-}
-
-
-coefplot, keep(*.yrtodem_p) drop(0.yrtodem_p) xline(10.5) yline(0) vertical omit   recast(line) color(blue) ciopts(recast(rline)  color(blue) lp(dash) ) graphregion(color(white)) bgcolor(white)  ///
-	xtitle("Years to demarcation") ytitle("Treatment effects on NDVI")
-
+reghdfe ntl ib30.first_cleared3 [aw=pct_area], absorb(cell_id) cluster(district_id year)
+coefplot, keep(*.first_cleared3) yline(0) vertical omit   recast(line) color(blue) ciopts(recast(rline)  color(blue) lp(dash) ) graphregion(color(white)) bgcolor(white) xtitle("Years to first hazard clearance") ytitle("Treatment effects on NTL") rename(22.first_cleared3 = -8 23.first_cleared3 = -7 24.first_cleared3 = -6 25.first_cleared3 = -5 26.first_cleared3 = -4 27.first_cleared3 = -3 28.first_cleared3 = -2 29.first_cleared3 = -1 30.first_cleared3 = 0 31.first_cleared3 = 1 32.first_cleared3 = 2 33.first_cleared3 = 3 34.first_cleared3 = 4 35.first_cleared3 = 5 36.first_cleared3 = 6 37.first_cleared3 = 7 38.first_cleared3 = 8) saving("$results/event_study_b", replace)
 
 ***************************************************************
 
@@ -425,139 +178,96 @@ coefplot, keep(*.yrtodem_p) drop(0.yrtodem_p) xline(10.5) yline(0) vertical omit
 
 drop cell_id gid_1 name_1 gid_2 name_2
 
-ds district_id year popcount baseline_pop, not
-collapse (mean) `r(varlist)' (sum) popcount baseline_pop, by(district_id year)
+ds district_id year popcount baseline_pop ha_count, not
+collapse (mean) `r(varlist)' (sum) popcount baseline_pop ha_count, by(district_id year)
 
-replace any_road_blockage = 1 if any_road_blockage>0 & !missing(any_road_blockage)
+replace all_cleared = (all_cleared==1)
 
 su
 
+drop log_popcount log_popdensity
+gen log_popcount = log(popcount)
+gen log_popdensity = log(popdensity)
+
 levelsof province_id
 levelsof district_id
+levelsof year_province
 
 ***
 
-* CHA only results - district level
-reghdfe ntl cha_cleared [aw=pct_area], absorb(absorb_temp) cluster(province_id year)
-outreg2 using "$results/main_models_cha_commune.doc", replace noni nocons ctitle(NTL) addtext("Grid cell FEs", N, "Year FEs", N)
+*  district level
+reghdfe ntl ha_count [aw=pct_area], absorb(absorb_temp) cluster(province_id year)
+outreg2 using "$results/main_models_district_ntl.doc", replace noni nocons ctitle(NTL) addtext("Year FEs", N, "District FEs", N, "Year*Prov. FEs", N)
 
-reghdfe ntl cha_cleared [aw=pct_area], absorb(year_province) cluster(province_id year)
-outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", N, "Year FEs", Y)
+reghdfe ntl ha_count [aw=pct_area], absorb(year) cluster(province_id year)
+outreg2 using "$results/main_models_district_ntl.doc", append noni nocons ctitle(NTL) addtext("Year FEs", Y, "District FEs", N, "Year*Prov. FEs", N)
 
-reghdfe ntl cha_cleared [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
+reghdfe ntl ha_count [aw=pct_area], absorb(year district_id) cluster(province_id year)
+outreg2 using "$results/main_models_district_ntl.doc", append noni nocons ctitle(NTL) addtext("Year FEs", Y, "District FEs", Y, "Year*Prov. FEs", N)
 
-reghdfe ntl c.cha_cleared##c.distance_to_road [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
+reghdfe ntl ha_count [aw=pct_area], absorb(district_id year_province) cluster(province_id year)
+outreg2 using "$results/main_models_district_ntl.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "District FEs", Y, "Year*Prov. FEs", Y)
 
-reghdfe ntl c.cha_cleared##c.baseline_pop [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
+reghdfe ntl c.ha_count##c.distance_to_road [aw=pct_area], absorb(district_id year_province) cluster(province_id year)
+outreg2 using "$results/main_models_district_ntl.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "District FEs", Y, "Year*Prov. FEs", Y)
 
+reghdfe ntl c.ha_count##c.baseline_pop [aw=pct_area], absorb(district_id year_province) cluster(province_id year)
+outreg2 using "$results/main_models_district_ntl.doc", append noni nocons ctitle(NTL) addtext("Year FEs", N, "District FEs", Y, "Year*Prov. FEs", Y)
 
-
-reghdfe popcount cha_cleared [aw=pct_area], absorb(absorb_temp) cluster(province_id year)
-outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", N, "Year FEs", N)
-
-reghdfe popcount cha_cleared [aw=pct_area], absorb(year_province) cluster(province_id year)
-outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", N, "Year FEs", Y)
-
-reghdfe popcount cha_cleared [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
-
-reghdfe popcount c.cha_cleared##c.distance_to_road [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
-
-reghdfe popcount c.cha_cleared##c.baseline_pop [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_cha_commune.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
-
-rm "$results/main_models_cha_commune.txt"
-
-
-***
-
-* SHA only results - district level
-reghdfe ntl sha_cleared [aw=pct_area], absorb(absorb_temp) cluster(province_id year)
-outreg2 using "$results/main_models_sha_district.doc", replace noni nocons ctitle(NTL) addtext("Grid cell FEs", N, "Year FEs", N)
-
-reghdfe ntl sha_cleared [aw=pct_area], absorb(year_province) cluster(province_id year)
-outreg2 using "$results/main_models_sha_district.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", N, "Year FEs", Y)
-
-reghdfe ntl sha_cleared [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_sha_district.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
-
-reghdfe ntl c.sha_cleared##c.distance_to_road [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_sha_district.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
+rm "$results/main_models_district_ntl.txt"
 
 
 
-reghdfe popcount sha_cleared [aw=pct_area], absorb(absorb_temp) cluster(province_id year)
-outreg2 using "$results/main_models_sha_district.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", N, "Year FEs", N)
+reghdfe log_popcount ha_count [aw=pct_area], absorb(absorb_temp) cluster(province_id year)
+outreg2 using "$results/main_models_district_pop.doc", replace noni nocons ctitle(ln(Pop. count)) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
 
-reghdfe popcount sha_cleared [aw=pct_area], absorb(year_province) cluster(province_id year)
-outreg2 using "$results/main_models_sha_district.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", N, "Year FEs", Y)
+reghdfe popcount ha_count [aw=pct_area], absorb(year) cluster(province_id year)
+outreg2 using "$results/main_models_district_pop.doc", append noni nocons ctitle(ln(Pop. count)) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
 
-reghdfe popcount sha_cleared [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_sha_district.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
+reghdfe popcount ha_count [aw=pct_area], absorb(year district_id) cluster(province_id year)
+outreg2 using "$results/main_models_district_pop.doc", append noni nocons ctitle(ln(Pop. count)) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
 
-reghdfe popcount c.sha_cleared##c.distance_to_road [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_sha_district.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
+reghdfe popcount ha_count [aw=pct_area], absorb(district_id year_province) cluster(province_id year)
+outreg2 using "$results/main_models_district_pop.doc", append noni nocons ctitle(ln(Pop. count)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
-rm "$results/main_models_sha_district.txt"
+reghdfe popcount c.ha_count##c.distance_to_road [aw=pct_area], absorb(district_id year_province) cluster(province_id year)
+outreg2 using "$results/main_models_district_pop.doc", append noni nocons ctitle(ln(Pop. count)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+
+
+reghdfe log_popdensity ha_count [aw=pct_area], absorb(absorb_temp) cluster(province_id year)
+outreg2 using "$results/main_models_district_pop.doc", append noni nocons ctitle(ln(Pop. density)) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
+
+reghdfe log_popdensity ha_count [aw=pct_area], absorb(year) cluster(province_id year)
+outreg2 using "$results/main_models_district_pop.doc", append noni nocons ctitle(ln(Pop. density)) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
+
+reghdfe log_popdensity ha_count [aw=pct_area], absorb(year district_id) cluster(province_id year)
+outreg2 using "$results/main_models_district_pop.doc", append noni nocons ctitle(ln(Pop. density)) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
+
+reghdfe log_popdensity ha_count [aw=pct_area], absorb(district_id year_province) cluster(province_id year)
+outreg2 using "$results/main_models_district_pop.doc", append noni nocons ctitle(ln(Pop. density)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+
+reghdfe log_popdensity c.ha_count##c.distance_to_road [aw=pct_area], absorb(district_id year_province) cluster(province_id year)
+outreg2 using "$results/main_models_district_pop.doc", append noni nocons ctitle(ln(Pop. density)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+
+
+rm "$results/main_models_district_pop.txt"
 
 ***
 
-* results considering both SHA and CHA - district level
-reghdfe ntl all_cleared [aw=pct_area], absorb(absorb_temp) cluster(province_id year)
-outreg2 using "$results/main_models_all_district.doc", replace noni nocons ctitle(NTL) addtext("Grid cell FEs", N, "Year FEs", N)
 
-reghdfe ntl all_cleared [aw=pct_area], absorb(year_province) cluster(province_id year)
-outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", N, "Year FEs", Y)
+collapse (mean) ntl popcount popdensity all_cleared, by(year cleared_by_2013)
 
-reghdfe ntl all_cleared [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
-
-reghdfe ntl all_cleared [aw=pct_area], absorb(district_id year_province) cluster(province_id year)
-outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
-
-reghdfe ntl c.all_cleared##c.distance_to_road [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
-
-reghdfe ntl c.all_cleared##c.baseline_pop [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(NTL) addtext("Grid cell FEs", Y, "Year FEs", Y)
+sort cell_id year
 
 
-reghdfe popcount all_cleared [aw=pct_area], absorb(absorb_temp) cluster(province_id year)
-outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", N, "Year FEs", N)
-
-reghdfe popcount all_cleared [aw=pct_area], absorb(year_province) cluster(province_id year)
-outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", N, "Year FEs", Y)
-
-reghdfe popcount all_cleared [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
-
-reghdfe popcount c.all_cleared##c.distance_to_road [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
-
-reghdfe popcount c.all_cleared##c.baseline_pop [aw=pct_area], absorb(district_id year) cluster(province_id year)
-outreg2 using "$results/main_models_all_district.doc", append noni nocons ctitle(Pop. count) addtext("Grid cell FEs", Y, "Year FEs", Y)
-
-rm "$results/main_models_all_district.txt"
+twoway (connect ntl year if cleared_by_2013==1 & year<=2013) (connect ntl year if cleared_by_2013==0 & year<=2013), xlabel(1992(2)2013) xtitle("Year") ytitle("NTL") legend(order(1 "Cleared by 2013" 2 "Not cleared by 2013")) bgcolor(white) graphregion(color(white)) saving("$results/ntl_timeseries", replace)
 
 
-***
+*twoway (connect popcount year if cleared_by_2013==1) (connect popcount year if cleared_by_2013==0), xtitle("Year") ytitle("Population") legend(order(1 "Cleared by 2013" 2 "Not cleared by 2013")) bgcolor(white) graphregion(color(white)) 
 
-collapse (mean) ntl popcount popdensity, by(year)
-
-sort year
-
-twoway connect ntl year
-
-twoway connect popcount year
-twoway connect popdensity year
-
-* restore
-
-
+*twoway connect ntl year
+*twoway connect popcount year
+*twoway connect popdensity year
 
 
 

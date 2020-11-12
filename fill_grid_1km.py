@@ -7,6 +7,7 @@ import rasterio
 import pandas as pd
 from shapely.geometry import Point, shape
 from rasterstats import zonal_stats
+import numpy as np
 
 
 empty_grid = gpd.read_file(path+"/empty_grid_afg_trimmed.geojson")
@@ -28,6 +29,8 @@ for i in range(1992, 2014):
 
 ###
 
+#adm
+
 coords_geom = [Point(xy) for xy in zip(grid.longitude, grid.latitude)]
 coords_df = gpd.GeoDataFrame(grid['cell_id'], crs='epsg:4326', geometry=coords_geom)
 del coords_geom
@@ -39,152 +42,73 @@ temp = temp[["cell_id", "GID_1", "NAME_1", "GID_2", "NAME_2"]]
 
 grid = grid.merge(temp, how="left", on="cell_id")
 
-#grid.drop(["geometry"], axis=1).to_csv(path+"/pre_panel.csv", index=False)
 
 ###
 
+#treatment
 
 hazard_polygons = gpd.read_file(path+"/hazard_polygons.geojson")
 hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Typ"].isin(["MineField", "Suspected Minefield", "Converted From SHA"]), :]
+hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Cla"]=="CHA", : ]
 #hazard_polygons["Status_Cha"] = pd.to_datetime(hazard_polygons["Status_Cha"], format="%Y-%m-%d")
-hazard_polygons = hazard_polygons[["OBJECTID", "Status_1", "Status_Cha", "Status_C_1", "Hazard_Cla", "Blockages", "geometry"]]
+hazard_polygons = hazard_polygons[["OBJECTID", "Status_1", "Status_Cha", "Status_C_1", "Hazard_Cla", "geometry"]]
+#hazard_polygons["hazard_area"] = hazard_polygons["geometry"].area
 
 ###
 
-# CHA
-cha = hazard_polygons.loc[hazard_polygons["Hazard_Cla"]=="CHA", : ]
+treatment = gpd.sjoin(empty_grid, hazard_polygons, how="left", op="intersects")
 
-#cha = gpd.sjoin(empty_grid, cha[["OBJECTID", "Status_Cha", "geometry"]], how="left", op="intersects")
-cha_grid = gpd.sjoin(empty_grid, cha, how="left", op="intersects")
+grid["total_ha"] = treatment.groupby(["cell_id"], sort=False)["Status_C_1"].count().reset_index(drop=True)
 
-test3 = gpd.sjoin(empty_grid, cha)
-cha_cells = test3["cell_id"].unique()
-has_cha = [i in cha_cells for i in grid["cell_id"]]
-grid["has_cha"] = has_cha
-grid["has_cha"] = grid["has_cha"] * 1
+grid.total_ha.describe()
 
 ###
 
-# cha_grid.loc[cha_grid["cell_id"].duplicated(), :]
-# has_cha = cha_grid["OBJECTID"].isnull() * 1
+treatment_cleared = treatment.loc[treatment["Status_1"]=="Expired", : ]
+#treatment_cleared=treatment
 
-###
+tc2 = treatment_cleared[["cell_id", "Status_C_1"]]
+tc2["Status_C_1"] = tc2["Status_C_1"].astype("Int64").astype("str")
 
-cha_grid_cleared = cha_grid.loc[cha_grid["Status_1"]=="Expired", : ]
+tc3 = tc2.pivot_table(values="Status_C_1", index="cell_id", aggfunc='|'.join)
 
-clearance_year = cha_grid_cleared.groupby(["cell_id"], sort=False)["Status_C_1"].max()
+tc3_1 = tc3
+tc3_1 = grid[["cell_id"]].merge(tc3, how="left", left_on="cell_id", right_index=True)
+tc3_1 = tc3_1.fillna("nan")
 
-grid = grid.merge(clearance_year.rename("cha_clearance_year"), how="left", left_on="cell_id", right_index=True)
+tc4 = tc3_1["Status_C_1"].to_list()
 
-#
+def build(year_str):
+	j = year_str.split('|')
+	return {i:j.count(i) for i in set(j)}
 
-road_blockage = cha_grid["Blockages"].str.contains("Road")
-road_blockage.fillna(False, inplace=True)
+tc5 = list(map(build, tc4))
+tc6 = pd.DataFrame(tc5)
+tc6.drop(["nan"], axis=1, inplace=True)
 
-cha_grid["road_blockage"] = road_blockage * 1
+for i in range(1992, 2021):
+	if str(i) not in tc6.columns:
+		tc6[str(i)] = 0
+	tc6[str(i)] = tc6[str(i)].fillna(0)
 
-road_blockage = cha_grid.groupby(["cell_id"], sort=False)["road_blockage"].max()
+tc6 = tc6*-1
 
-grid = grid.merge(road_blockage.rename("cha_road_blockage"), how="left", left_on="cell_id", right_index=True)
+#tc7 = tc6.reindex(sorted(tc6.columns, reverse=True), axis=1)
+tc7 = tc6.reindex(sorted(tc6.columns), axis=1)
 
-#
+tc8 = tc7.apply(np.cumsum, axis=1)
 
-infra_blockage = cha_grid["Blockages"].str.contains("Infrastructure")
-infra_blockage.fillna(False, inplace=True)
+tc8 = tc8.add(grid["total_ha"], axis=0)
 
-cha_grid["infra_blockage"] = infra_blockage * 1
+#tc8 = (tc7.sub(grid["total_ha"], axis=0) == 0)*1
+tc9 = tc8.reindex(sorted(tc8.columns), axis=1)
+for i in tc9.columns:
+	tc9.rename({str(i):"ha_count"+str(i)}, axis=1, inplace=True)
 
-infra_blockage = cha_grid.groupby(["cell_id"], sort=False)["infra_blockage"].max()
+keep_cols = ["ha_count"+str(i) for i in range(1992, 2014)] + ["ha_count2015", "ha_count2020"]
+tc9 = tc9[keep_cols]
 
-grid = grid.merge(infra_blockage.rename("cha_infrastructure_blockage"), how="left", left_on="cell_id", right_index=True)
-
-#
-
-ag_blockage = cha_grid["Blockages"].str.contains("Agriculture")
-ag_blockage.fillna(False, inplace=True)
-
-cha_grid["ag_blockage"] = ag_blockage * 1
-
-ag_blockage = cha_grid.groupby(["cell_id"], sort=False)["ag_blockage"].max()
-
-grid = grid.merge(infra_blockage.rename("cha_agriculture_blockage"), how="left", left_on="cell_id", right_index=True)
-
-#
-
-housing_blockage = cha_grid["Blockages"].str.contains("Housing")
-housing_blockage.fillna(False, inplace=True)
-
-cha_grid["housing_blockage"] = housing_blockage * 1
-
-housing_blockage = cha_grid.groupby(["cell_id"], sort=False)["housing_blockage"].max()
-
-grid = grid.merge(infra_blockage.rename("cha_housing_blockage"), how="left", left_on="cell_id", right_index=True)
-
-###
-
-# SHA
-sha = hazard_polygons.loc[hazard_polygons["Hazard_Cla"]=="SHA", :]
-
-sha_grid = gpd.sjoin(empty_grid, sha, how="left", op="intersects")
-
-sha_grid_cleared = sha_grid.loc[sha_grid["Status_1"]=="Expired", : ]
-
-
-test4 = gpd.sjoin(empty_grid, sha)
-sha_cells = test4["cell_id"].unique()
-has_sha = [i in sha_cells for i in grid["cell_id"]]
-grid["has_sha"] = has_sha
-grid["has_sha"] = grid["has_sha"] * 1
-
-###
-
-clearance_year = sha_grid_cleared.groupby(["cell_id"], sort=False)["Status_C_1"].max()
-
-grid = grid.merge(clearance_year.rename("sha_clearance_year"), how="left", left_on="cell_id", right_index=True)
-
-#
-
-road_blockage = sha_grid["Blockages"].str.contains("Road")
-road_blockage.fillna(False, inplace=True)
-
-sha_grid["road_blockage"] = road_blockage * 1
-
-road_blockage = sha_grid.groupby(["cell_id"], sort=False)["road_blockage"].max()
-
-grid = grid.merge(road_blockage.rename("sha_road_blockage"), how="left", left_on="cell_id", right_index=True)
-
-#
-
-infra_blockage = sha_grid["Blockages"].str.contains("Infrastructure")
-infra_blockage.fillna(False, inplace=True)
-
-sha_grid["infra_blockage"] = infra_blockage * 1
-
-infra_blockage = sha_grid.groupby(["cell_id"], sort=False)["infra_blockage"].max()
-
-grid = grid.merge(infra_blockage.rename("sha_infrastructure_blockage"), how="left", left_on="cell_id", right_index=True)
-
-#
-
-ag_blockage = sha_grid["Blockages"].str.contains("Agriculture")
-ag_blockage.fillna(False, inplace=True)
-
-sha_grid["ag_blockage"] = ag_blockage * 1
-
-ag_blockage = sha_grid.groupby(["cell_id"], sort=False)["ag_blockage"].max()
-
-grid = grid.merge(infra_blockage.rename("sha_agriculture_blockage"), how="left", left_on="cell_id", right_index=True)
-
-#
-
-housing_blockage = sha_grid["Blockages"].str.contains("Housing")
-housing_blockage.fillna(False, inplace=True)
-
-sha_grid["housing_blockage"] = housing_blockage * 1
-
-housing_blockage = sha_grid.groupby(["cell_id"], sort=False)["housing_blockage"].max()
-
-grid = grid.merge(infra_blockage.rename("sha_housing_blockage"), how="left", left_on="cell_id", right_index=True)
+grid = pd.concat([grid, tc9], axis=1)
 
 ###
 
@@ -205,20 +129,14 @@ grid = pd.concat([grid, b], axis=1)
 
 ###
 
-
-
-
-###
-
-grid = pd.read_csv(path+"/pre_panel.csv")
-
-
+#grid = pd.read_csv(path+"/pre_panel.csv")
 
 ###
 
-grid.to_csv(path+"/pre_panel.csv", index=False)
+grid.drop(["geometry"], axis=1).to_csv(path+"/pre_panel.csv", index=False)
 
-
+temp = grid.sample(100)
+temp.to_file("/Users/christianbaehr/Downloads/temp.geojson", driver="GeoJSON")
 
 #schema = gpd.io.file.infer_schema(test)
 #schema["properties"]["Status_Cha"] = "datetime"
