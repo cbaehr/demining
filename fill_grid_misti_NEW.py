@@ -139,9 +139,9 @@ for i, g1 in enumerate(geom_p1):
         a = (g1.intersection(g3).area/g1.area)*100
         df2=df2.append({"merge_id": i, "pct_area_cha": a}, ignore_index=True)
 
-misti_geo.merge(df2, on="merge_id")
+misti_geo = misti_geo.merge(df2, on="merge_id")
 
-misti_geo.rename({"pct_area_cha":"pct_area"}, axis=1)
+misti_geo.rename({"pct_area_cha":"pct_area"}, axis=1, inplace=True)
 
 #gdf3.merge(df2, on="merge_id", inplace=True)
 #gdf3 = pd.concat([gdf3, df2.drop(["merge_id"], axis=1)], axis=1)

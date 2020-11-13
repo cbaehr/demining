@@ -221,16 +221,16 @@ rm "$results/main_models_district_ntl.txt"
 reghdfe log_popcount ha_count [aw=pct_area], absorb(absorb_temp) cluster(province_id year)
 outreg2 using "$results/main_models_district_pop.doc", replace noni nocons ctitle(ln(Pop. count)) addtext("Year FEs", N, "Grid cell FEs", N, "Year*Prov. FEs", N)
 
-reghdfe popcount ha_count [aw=pct_area], absorb(year) cluster(province_id year)
+reghdfe log_popcount ha_count [aw=pct_area], absorb(year) cluster(province_id year)
 outreg2 using "$results/main_models_district_pop.doc", append noni nocons ctitle(ln(Pop. count)) addtext("Year FEs", Y, "Grid cell FEs", N, "Year*Prov. FEs", N)
 
-reghdfe popcount ha_count [aw=pct_area], absorb(year district_id) cluster(province_id year)
+reghdfe log_popcount ha_count [aw=pct_area], absorb(year district_id) cluster(province_id year)
 outreg2 using "$results/main_models_district_pop.doc", append noni nocons ctitle(ln(Pop. count)) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
 
-reghdfe popcount ha_count [aw=pct_area], absorb(district_id year_province) cluster(province_id year)
+reghdfe log_popcount ha_count [aw=pct_area], absorb(district_id year_province) cluster(province_id year)
 outreg2 using "$results/main_models_district_pop.doc", append noni nocons ctitle(ln(Pop. count)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
-reghdfe popcount c.ha_count##c.distance_to_road [aw=pct_area], absorb(district_id year_province) cluster(province_id year)
+reghdfe log_popcount c.ha_count##c.distance_to_road [aw=pct_area], absorb(district_id year_province) cluster(province_id year)
 outreg2 using "$results/main_models_district_pop.doc", append noni nocons ctitle(ln(Pop. count)) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
 
