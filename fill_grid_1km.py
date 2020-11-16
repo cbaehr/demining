@@ -129,11 +129,26 @@ grid = pd.concat([grid, b], axis=1)
 
 ###
 
+# Kabul coords 34.535169, 69.171300
+
+grid = pd.read_csv(path+"/pre_panel.csv")
+
+
+distance_to_kabul = np.sqrt(((grid["longitude"]-69.171300)**2 + (grid["latitude"]- 34.535169)**2))
+distance_to_kabul_km = distance_to_kabul/0.010
+grid["distance_to_kabul"] = distance_to_kabul_km
+
+###
+
 #grid = pd.read_csv(path+"/pre_panel.csv")
 
 ###
 
 grid.drop(["geometry"], axis=1).to_csv(path+"/pre_panel.csv", index=False)
+
+#grid.to_csv(path+"/pre_panel.csv", index=False)
+
+###
 
 temp = grid.sample(100)
 temp.to_file("/Users/christianbaehr/Downloads/temp.geojson", driver="GeoJSON")

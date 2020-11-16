@@ -14,62 +14,11 @@ rename m7 survey_year
 
 egen province_year = group(survey_year province_id)
 
-gen ha_count = total_ha-num_cleared
 gen all_cleared = (ha_count==0)
 
 * su
 
 * outreg2 using "$results/summary_statistics_misti.doc", replace sum(log)
-
-********************************************************************************
-
-local lhs = "q28n q29n"
-local indexname = "index1"
-local rhs = "ha_count"
-
-local i = 0
-foreach l in `lhs'{
-	local i = `i' + 1
-	gen temp_`i' = `l'
-}
-
-local nvars = `i'
-forvalues i = 1/`nvars' {
-	su temp_`i' if `rhs' == 0 `sampand'
-	local mean = r(mean)
-	local sdev = r(sd)
-	gen temp_`i'_z = (temp_`i' - `mean')/`sdev'
-}
-
-correl temp_*z if `rhs' == 0 `sampand', covar
-local covcount = r(N)
-count if `rhs' == 0 `sampand'
-local controlcount = r(N)
-if `covcount'<`controlcount'/2 {
-	display "Correlation matrix is estimated using <50% of the sample, due to missing values in some components of the index."
-}
-
-matrix cov = r(C)
-matrix invcov = syminv(cov)
-matrix unity = J(rowsof(invcov), 1, 1)
-matrix weights = syminv(unity' * invcov * unity) * (unity' * invcov)
-
-svmat weights, names(weighttemp1)
-forvalues i = 1/`nvars' {
-	gen temp2_`i' = temp_`i'_z * weighttemp1`i'[1] `samp'
-}
-
-egen `indexname' = rowmean( temp2_* )
-summ `indexname' if (`rhs'==0)
-replace `indexname' = `indexname'/r(sd)
-label var `indexname' "`indexlabel'"
-
-drop weighttemp1*
-forvalues i=1/`nvars' {
-	drop temp_`i' temp2_`i' temp_`i'_z
-}
-
-
 
 ********************************************************************************
 
@@ -82,50 +31,74 @@ outreg2 using "$results/general_attitudes_misti.doc", append noni nocons ctitle(
 reghdfe q27n ha_count, absorb(village_id province_year) cluster(district_id survey_year)
 outreg2 using "$results/general_attitudes_misti.doc", append noni nocons ctitle(Q27) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
 
+reghdfe q28_q29_index ha_count, absorb(village_id province_year) cluster(district_id survey_year)
+outreg2 using "$results/general_attitudes_misti.doc", append noni nocons ctitle(Q28-29_index) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
+
 reghdfe q30n ha_count, absorb(village_id province_year) cluster(district_id survey_year)
 outreg2 using "$results/general_attitudes_misti.doc", append noni nocons ctitle(Q30) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
 
 ***
 
-reghdfe q1n ha_count, absorb(village_id province_year) cluster(district_id survey_year)
-outreg2 using "$results/general_attitudes_misti.doc", replace noni nocons ctitle(Q1) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
-
-
-
-
-
+reghdfe q2a_q2b_index ha_count, absorb(village_id province_year) cluster(district_id survey_year)
+outreg2 using "$results/security_misti.doc", replace noni nocons ctitle(Q2a-Q2b_index) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
 
 ***
 
-gen temp = 1
-reghdfe q1n num_cleared, absorb(temp) cluster(district_id survey_year)
-outreg2 using "$results/main_models_misti.doc", replace noni nocons ctitle(Q1) addtext("Year FEs", N, "Village FEs", N, "Year*Prov. FEs", N)
+reghdfe q3b_q4d_index ha_count, absorb(village_id province_year) cluster(district_id survey_year)
+outreg2 using "$results/mktaccess_misti.doc", replace noni nocons ctitle(Q3b-Q4d_index) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
 
-reghdfe q1n num_cleared, absorb(survey_year) cluster(district_id survey_year)
-outreg2 using "$results/main_models_misti.doc", append noni nocons ctitle(Q1) addtext("Year FEs", Y, "Village FEs", N, "Year*Prov. FEs", N)
+reghdfe q31n ha_count, absorb(village_id province_year) cluster(district_id survey_year)
+outreg2 using "$results/mktaccess_misti.doc", append noni nocons ctitle(Q31) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
 
-reghdfe q1n num_cleared, absorb(survey_year village_id) cluster(district_id survey_year)
-outreg2 using "$results/main_models_misti.doc", append noni nocons ctitle(Q1) addtext("Year FEs", Y, "Village FEs", Y, "Year*Prov. FEs", N)
-
-reghdfe q1n num_cleared, absorb(village_id province_year) cluster(district_id survey_year)
-outreg2 using "$results/main_models_misti.doc", append noni nocons ctitle(Q1) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
-
-reghdfe q1n any_cleared, absorb(temp) cluster(district_id survey_year)
-outreg2 using "$results/main_models_misti.doc", append noni nocons ctitle(Q1) addtext("Year FEs", N, "Village FEs", N, "Year*Prov. FEs", N)
-
-reghdfe q1n any_cleared, absorb(survey_year) cluster(district_id survey_year)
-outreg2 using "$results/main_models_misti.doc", append noni nocons ctitle(Q1) addtext("Year FEs", Y, "Village FEs", N, "Year*Prov. FEs", N)
-
-reghdfe q1n any_cleared, absorb(survey_year village_id) cluster(district_id survey_year)
-outreg2 using "$results/main_models_misti.doc", append noni nocons ctitle(Q1) addtext("Year FEs", Y, "Village FEs", Y, "Year*Prov. FEs", N)
-
-reghdfe q1n any_cleared, absorb(village_id province_year) cluster(district_id survey_year)
-outreg2 using "$results/main_models_misti.doc", append noni nocons ctitle(Q1) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
+reghdfe w1_q36en ha_count, absorb(village_id) cluster(district_id)
+outreg2 using "$results/mktaccess_misti.doc", append noni nocons ctitle(Q36e) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", N)
 
 ***
 
-reghdfe q2an any_cleared, absorb(village_id province_year) cluster(district_id survey_year)
-reghdfe q2an any_cleared, absorb(village_id province_year) cluster(district_id survey_year)
+reghdfe q11a_q11d_index ha_count, absorb(village_id province_year) cluster(district_id survey_year)
+outreg2 using "$results/gvmttrust_misti.doc", replace noni nocons ctitle(Q11a-Q11d_index) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
+
+reghdfe q11a_q11d_index ha_count, absorb(village_id province_year) cluster(district_id survey_year)
+outreg2 using "$results/gvmttrust_misti.doc", append noni nocons ctitle(Q11a-Q11d_index) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
+
+reghdfe q14b_q14f_index ha_count, absorb(village_id province_year) cluster(district_id survey_year)
+outreg2 using "$results/gvmttrust_misti.doc", append noni nocons ctitle(Q14a-Q14f_index) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
+
+reghdfe q15n ha_count, absorb(village_id province_year) cluster(district_id survey_year)
+outreg2 using "$results/gvmttrust_misti.doc", append noni nocons ctitle(Q18) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
+
+reghdfe q16a_q16i_index ha_count, absorb(village_id province_year) cluster(district_id survey_year)
+outreg2 using "$results/gvmttrust_misti.doc", append noni nocons ctitle(Q16a-Q16i_index) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
+
+***
+
+reghdfe q36a_q36f_index ha_count, absorb(village_id) cluster(district_id)
+outreg2 using "$results/accesstoservices_misti.doc", replace noni nocons ctitle(Q36a-Q36f_index) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", N)
+
+***
+
+reghdfe q32n ha_count, absorb(village_id province_year) cluster(district_id survey_year)
+outreg2 using "$results/economy_misti.doc", replace noni nocons ctitle(Q32) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
+
+reghdfe q33n ha_count, absorb(village_id province_year) cluster(district_id survey_year)
+outreg2 using "$results/economy_misti.doc", append noni nocons ctitle(Q33) addtext("Year FEs", N, "Village FEs", Y, "Year*Prov. FEs", Y)
+
+cd
+cd "$results"
+shell rm *.txt
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

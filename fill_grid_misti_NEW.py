@@ -154,15 +154,12 @@ b.columns = ["pop_count2010"]
 misti_geo = pd.concat([misti_geo, b], axis=1)
 
 
-###
-
 # misti_geo.to_file("/Users/christianbaehr/Downloads/test.geojson", driver="GeoJSON")
 
 ##########
 
 #test = misti_geo.sample(100)
 #test.to_file("/Users/christianbaehr/Downloads/test_misti.geojson", driver="GeoJSON")
-
 
 misti_geo.drop(["geometry"], axis=1).to_csv(path+"/misti/misti_panel.csv", index=False)
 
