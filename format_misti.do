@@ -1,8 +1,8 @@
-local user = "r"
+local user = "c"
 
 if "`user'" == "c" {
 	global data "/Users/christianbaehr/Box Sync/demining/inputData/"
-	global mistidata "misti/"
+	global mistidata "${data}/misti/"
 }
 if "`user'" == "r" {
 	global data "C:\Users\rcsayers\Box\demining\inputData\"

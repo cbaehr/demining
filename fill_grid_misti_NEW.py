@@ -46,13 +46,25 @@ misti_geo[["survey_id", "geometry"]].to_file(path+"/misti/empty_grid_misti.geojs
 hazard_polygons = gpd.read_file(path+"/hazard_polygons.geojson")
 hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Typ"].isin(["MineField", "Suspected Minefield", "Converted From SHA"]), :]
 hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Cla"].isin(["CHA", "SHA"]), : ]
-#hazard_polygons["Status_Cha"] = pd.to_datetime(hazard_polygons["Status_Cha"], format="%Y-%m-%d")
+hazard_polygons["Status_Cha"] = pd.to_datetime(hazard_polygons["Status_Cha"], format="%Y-%m-%d")
 hazard_polygons = hazard_polygons[["OBJECTID", "Status_1", "Status_Cha", "Status_C_1", "Hazard_Cla", "geometry"]]
 #hazard_polygons["hazard_area"] = hazard_polygons["geometry"].area
 
 ###
 
 treatment = gpd.sjoin(misti_geo[["survey_id", "geometry"]], hazard_polygons, how="left", op="intersects")
+
+(treatment.survey_id.duplicated()*1).describe()
+
+a = treatment.groupby(["survey_id"], sort=False)["Status_Cha"].max()
+b = pd.DataFrame(a)
+
+misti_geo["last_clearance_date"] = b
+
+treatment["Status_Cha"]
+
+treatment.groupby(["survey_id"], sort=False)["Status_C_1"].count().reset_index(drop=True)
+
 
 misti_geo["total_ha"] = treatment.groupby(["survey_id"], sort=False)["Status_C_1"].count().reset_index(drop=True)
 
@@ -116,6 +128,9 @@ for i in range(1, misti_geo.shape[0]):
 	c = a[b<temp_year]
 	misti_geo["num_cleared"].iloc[i] = c.sum()*-1
 
+######################################################################################################################
+
+misti_geo = misti_geo.loc[misti_geo["ha_count1992"]>0, :]
 
 ######################################################################################################################
 
@@ -148,37 +163,11 @@ for i, g1 in enumerate(geom_p1):
 #        a = (g1.intersection(g3).area/g1.area)*100
 #        df2=df2.append({"merge_id": i, "pct_area_cha": a}, ignore_index=True)
 
-misti_geo["pct_area"] = a
+misti_geo.reset_index(drop=True, inplace=True)
 
-#misti_geo = misti_geo.merge(df2, on="merge_id")
-#misti_geo.rename({"pct_area_cha":"pct_area"}, axis=1, inplace=True)
+misti_geo["pct_area"] = pct_covered
 
-#gdf3.merge(df2, on="merge_id", inplace=True)
-#gdf3 = pd.concat([gdf3, df2.drop(["merge_id"], axis=1)], axis=1)
-
-
-
-
-gdf["merge_id"] = gdf.index
-
-path1 = out_path+"/empty_grid_afg.geojson"
-path2 = path+"/hazard_dissolve.geojson"
-
-polygon1 = fiona.open(path1)
-polygon2 = fiona.open(path2)
-
-geom_p1 = [ shape(feat["geometry"]) for feat in polygon1 ]
-geom_p2 = [ shape(feat["geometry"]) for feat in polygon2 ]
-
-g2 = geom_p2[0]
-g1_area = geom_p1[0].area
-
-pct_covered = []
-
-for i, g1 in enumerate(geom_p1):
-    a = (g1.intersection(g2).area/g1_area) * 100
-    pct_covered = pct_covered + [a]
-
+#misti_geo.to_file("/Users/christianbaehr/Downloads/misti_geo.geojson", driver="GeoJSON")
 
 
 ##########
@@ -192,6 +181,8 @@ misti_geo = pd.concat([misti_geo, b], axis=1)
 # misti_geo.to_file("/Users/christianbaehr/Downloads/test.geojson", driver="GeoJSON")
 
 ##########
+
+misti_geo = misti_geo.loc[misti_geo["pct_area"]>0, : ]
 
 #test = misti_geo.sample(100)
 #test.to_file("/Users/christianbaehr/Downloads/test_misti.geojson", driver="GeoJSON")
