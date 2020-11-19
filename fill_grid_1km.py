@@ -1,5 +1,6 @@
 
 path = "/Users/christianbaehr/Box Sync/demining/inputData"
+out_path = "/sciclone/scr20/cbaehr/demining"
 
 import fiona
 import geopandas as gpd
@@ -11,11 +12,34 @@ import numpy as np
 
 
 empty_grid = gpd.read_file(path+"/empty_grid_afg_trimmed.geojson")
-coords = [(x,y) for x, y in zip(empty_grid.longitude, empty_grid.latitude)]
 
 ###
 
 grid = empty_grid
+
+###
+
+#adm
+
+#coords_geom = [Point(xy) for xy in zip(grid.lon, grid.lat)]
+#coords_df = gpd.GeoDataFrame(grid['cell_id'], crs='epsg:4326', geometry=coords_geom)
+#del coords_geom
+
+adm = gpd.read_file(path+"/gadm36_AFG_2.geojson")
+
+temp = gpd.sjoin(grid, adm)
+temp = temp[["cell_id", "GID_1", "NAME_1", "GID_2", "NAME_2"]]
+
+idx = temp["cell_id"].duplicated()*1
+temp = temp.loc[idx==0, : ]
+
+grid = grid.merge(temp, how="left", on="cell_id")
+
+grid.drop(grid[grid.NAME_2.isnull()].index, inplace=True)
+
+grid.reset_index(drop=True, inplace=True)
+
+coords = [(x,y) for x, y in zip(grid.lon, grid.lat)]
 
 for i in range(1992, 2014):
 	if i<=2008:
@@ -27,21 +51,6 @@ for i in range(1992, 2014):
 		col = [j[0] for j in ras.sample(coords)]
 		grid["ntl"+str(i)] = col
 
-###
-
-#adm
-
-coords_geom = [Point(xy) for xy in zip(grid.longitude, grid.latitude)]
-coords_df = gpd.GeoDataFrame(grid['cell_id'], crs='epsg:4326', geometry=coords_geom)
-del coords_geom
-
-adm = gpd.read_file(path+"/gadm36_AFG_2.geojson")
-
-temp = gpd.sjoin(coords_df, adm)
-temp = temp[["cell_id", "GID_1", "NAME_1", "GID_2", "NAME_2"]]
-
-grid = grid.merge(temp, how="left", on="cell_id")
-
 
 ###
 
@@ -49,14 +58,14 @@ grid = grid.merge(temp, how="left", on="cell_id")
 
 hazard_polygons = gpd.read_file(path+"/hazard_polygons.geojson")
 hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Typ"].isin(["MineField", "Suspected Minefield", "Converted From SHA"]), :]
-hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Cla"]=="CHA", : ]
+hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Cla"].isin(["CHA", "SHA"]), : ]
 #hazard_polygons["Status_Cha"] = pd.to_datetime(hazard_polygons["Status_Cha"], format="%Y-%m-%d")
 hazard_polygons = hazard_polygons[["OBJECTID", "Status_1", "Status_Cha", "Status_C_1", "Hazard_Cla", "geometry"]]
 #hazard_polygons["hazard_area"] = hazard_polygons["geometry"].area
 
 ###
 
-treatment = gpd.sjoin(empty_grid, hazard_polygons, how="left", op="intersects")
+treatment = gpd.sjoin(grid, hazard_polygons, how="left", op="intersects")
 
 grid["total_ha"] = treatment.groupby(["cell_id"], sort=False)["Status_C_1"].count().reset_index(drop=True)
 
@@ -122,7 +131,7 @@ for i in [2000, 2005, 2010, 2015, 2020]:
 
 ###
 
-a = zonal_stats(path+"/empty_grid_afg_trimmed.geojson", path+"/distance_starts_roads.tif", stats=["mean"])
+a = zonal_stats(grid, path+"/distance_starts_roads.tif", stats=["mean"])
 b = pd.DataFrame(a)
 b.columns = ["distance_to_road"]
 grid = pd.concat([grid, b], axis=1)
@@ -134,7 +143,7 @@ grid = pd.concat([grid, b], axis=1)
 grid = pd.read_csv(path+"/pre_panel.csv")
 
 
-distance_to_kabul = np.sqrt(((grid["longitude"]-69.171300)**2 + (grid["latitude"]- 34.535169)**2))
+distance_to_kabul = np.sqrt(((grid["lon"]-69.171300)**2 + (grid["lat"]- 34.535169)**2))
 distance_to_kabul_km = distance_to_kabul/0.010
 grid["distance_to_kabul"] = distance_to_kabul_km
 

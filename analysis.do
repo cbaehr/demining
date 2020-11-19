@@ -8,30 +8,24 @@ import delimited "$data/pre_panel.csv", clear
 * drop IHAs
 reshape long ntl popcount popdensity ha_count area_cleared, i(cell_id) j(year)
 
-drop if year==2014 | (year>2015 & year<2020)
+* drop if year==2014 | (year>2015 & year<2020)
 
 gen log_popcount = log(popcount)
 gen log_popdensity = log(popdensity)
 
 gen all_cleared = (ha_count==0)
 
-*gen time_to_cha_clearance = (year - cha_clearance_year)
-*gen cha_cleared = (time_to_cha_clearance >= 0) & !missing(cha_clearance_year)
-*replace cha_cleared = 1 if has_cha==0
+gen first_trt_tmp = (ha_count!=total_ha) * year
+replace first_trt_tmp = . if first_trt_tmp==0
+egen first_clearance_year = min(first_trt_tmp), by(cell_id)
 
-*gen all_clearance_yr = max(cha_clearance_year, sha_clearance_year)
-*gen time_to_all_clearance = (year-all_clearance_yr)
-* gen all_cleared = (time_to_all_clearance >= 0) & !missing(all_clearance_yr)
+gen last_trt_tmp = (ha_count==0) * year
+replace last_trt_tmp = . if last_trt_tmp==0
+egen last_clearance_year = min(last_trt_tmp), by(cell_id)
+replace last_clearance_year= . if last_clearance_year>2013
 
-*gen a = subinstr(cha_enddate, "-", "", .)
-*gen c = date(a, "YMD")
-*format c %d
-*gen cha_yr = year(c)
+gen time_of_clearance = last_clearance_year-first_clearance_year
 
-*gen d = subinstr(cha_enddate, "-", "", .)
-*gen e = date(d, "YMD")
-*format e %d
-*gen sha_yr = year(e)
 
 egen district_id = group(gid_2)
 egen province_id = group(gid_1)
@@ -49,6 +43,10 @@ bys cleared_by_2013: su all_cleared if year==2013
 
 
 bysort cell_id (year): gen baseline_pop = popdensity[9]
+
+egen max_ntl = max(ntl), by(cell_id)
+egen min_ntl = min(ntl), by(cell_id)
+
 
 gen absorb_temp=1
 
@@ -177,21 +175,34 @@ coefplot, keep(*.first_cleared3) yline(0) vertical omit   recast(line) color(blu
 
 ********************************************************************************
 
-gen min_year_tmp = (ha_count!=total_ha) * year
-replace min_year_tmp=. if min_year_tmp==0
-egen min_year = min(min_year_tmp), by(cell_id)
-
-replace min_year=2002 if min_year<2003
-replace min_year=. if min_year>=2015
-
 local year_lab ""
-forv y = 2003/2013 {
-	local year_lab "`year_lab' `y'.min_year#c.year = `y'"
+forv y = 0/17 {
+	local year_lab "`year_lab' `y'.time_of_clearance#c.year = `y'"
 }
 
-reghdfe ntl ibn.min_year#c.year if year<2003 [aw=pct_area], absorb(cell_id) cluster(district_id year)
-coefplot, keep(*.min_year*) vertical graphregion(color(white)) legend(off) xtitle("Year of first clearance activity") ytitle("Pre-2003 trend in NTL") rename(`year_lab') xlabel(, labsize(vsmall) alternate)
+local keep_vals ""
+forv z = 0/10 {
+	local keep_vals "`keep_vals' `z'.time_of_clearance*"
+}
 
+reghdfe ntl ibn.time_of_clearance#c.year if year<2003 [aw=pct_area], absorb(cell_id) cluster(district_id year)
+loc ref = _b[0.time_of_clearance#c.year]
+coefplot, keep(`keep_vals') vertical yline(`ref') graphregion(color(white)) legend(off) xtitle("Years between first-last clearance activity") ytitle("Pre-2003 trend in NTL") rename(`year_lab') xlabel(, labsize(vsmall) alternate) saving("$results/time_taken_pretrend", replace)
+
+
+local year_lab ""
+forv y = 1992/2013 {
+	local year_lab "`year_lab' `y'.last_clearance_year#c.year = `y'"
+}
+
+local keep_vals ""
+forv z = 2003/2013 {
+	local keep_vals "`keep_vals' `z'.last_clearance_year*"
+}
+
+reghdfe ntl ibn.last_clearance_year#c.year if year<2003 [aw=pct_area], absorb(cell_id) cluster(district_id year)
+loc ref = _b[2003.last_clearance_year#c.year]
+coefplot, keep(`keep_vals') vertical yline(`ref') graphregion(color(white)) legend(off) xtitle("Year of clearance completion") ytitle("Pre-2003 trend in NTL") rename(`year_lab') xlabel(, labsize(vsmall) alternate) saving("$results/timing_pretrend", replace)
 
 
 ********************************************************************************
