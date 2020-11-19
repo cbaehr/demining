@@ -14,11 +14,11 @@ rename m7 survey_year
 
 egen wave = group(m2)
 egen province_wave = group(wave province_id)
-egen province_year = group(survey_year province_id)
+*egen province_year = group(survey_year province_id)
 
-gen all_cleared = (ha_count==0)
 
 drop if ha_count2012==0
+
 
 gen absorb_temp = 1
 
@@ -112,7 +112,7 @@ rm "$results/misti_q30.txt"
 ***
 
 reghdfe q2a_q2b_index all_cleared [aw=pct_area], absorb(absorb_temp) cluster(district_id wave)
-outreg2 using "$results/misti_q2a_q2b_index.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N, "Wave*Province FEs", N) nonotes addnote(Q2a: Would you say security in your local area is good fair or poor? Is that ‘very good/poor'? Q2b: Is your local area more secure just as secure or less secure than it was a year ago? Is that ‘much more/less secure' or ‘a little more/less secure'? Q2c: And what about a year from now do your expect your local area will be more secure just as secure or less secure than it is now? Is that ‘much more/less secure' or ‘somewhat more/less secure'? Robust standard errors in parentheses. *** p<0.01 ** p<0.05 * p<0.1)
+outreg2 using "$results/misti_q2a_q2b_index.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N, "Wave*Province FEs", N) nonotes addnote(Q2a: Would you say security in your local area is good fair or poor? Is that very good/poor'? Q2b: Is your local area more secure just as secure or less secure than it was a year ago? Is that much more/less secure' or a little more/less secure'? Q2c: And what about a year from now do your expect your local area will be more secure just as secure or less secure than it is now? Is that much more/less secure' or somewhat more/less secure'? Robust standard errors in parentheses. *** p<0.01 ** p<0.05 * p<0.1)
 
 reghdfe q2a_q2b_index all_cleared [aw=pct_area], absorb(survey_year) cluster(district_id wave)
 outreg2 using "$results/misti_q2a_q2b_index.doc", append noni nocons addtext("Year FEs", Y, "Village FEs", N, "Wave*Province FEs", N)
@@ -128,7 +128,7 @@ rm "$results/misti_q2a_q2b_index.txt"
 ***
 
 reghdfe q3b_q4d_index all_cleared [aw=pct_area], absorb(absorb_temp) cluster(district_id wave)
-outreg2 using "$results/misti_q3b_q4d_index.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N, "Wave*Province FEs", N) nonotes addnote(Q3b: Would you say that security on the roads you use in this area has improved worsened or stayed the same in the past year? Is that ‘improved/worsened a little or a lot'? Q4e: ... traveling to a neighboring village? Q4f: ... traveling to the district or provincial capital? Robust standard errors in parentheses. *** p<0.01 ** p<0.05 * p<0.1)
+outreg2 using "$results/misti_q3b_q4d_index.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N, "Wave*Province FEs", N) nonotes addnote(Q3b: Would you say that security on the roads you use in this area has improved worsened or stayed the same in the past year? Is that improved/worsened a little or a lot'? Q4e: ... traveling to a neighboring village? Q4f: ... traveling to the district or provincial capital? Robust standard errors in parentheses. *** p<0.01 ** p<0.05 * p<0.1)
 
 reghdfe q3b_q4d_index all_cleared [aw=pct_area], absorb(survey_year) cluster(district_id wave)
 outreg2 using "$results/misti_q3b_q4d_index.doc", append noni nocons addtext("Year FEs", Y, "Village FEs", N, "Wave*Province FEs", N)

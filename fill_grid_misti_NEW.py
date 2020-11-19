@@ -9,6 +9,7 @@ import pandas as pd
 from shapely.geometry import Point, shape
 from rasterstats import zonal_stats
 import numpy as np
+from operator import attrgetter
 
 misti = pd.read_csv(path+"/misti/misti_full.csv")
 
@@ -188,6 +189,61 @@ misti_geo = misti_geo.loc[misti_geo["pct_area"]>0, : ]
 #test.to_file("/Users/christianbaehr/Downloads/test_misti.geojson", driver="GeoJSON")
 
 misti_geo.drop(["geometry"], axis=1).to_csv(path+"/misti/misti_panel.csv", index=False)
+
+######################################################################################################################
+
+misti_geo = pd.read_csv(path+"/misti/misti_panel.csv")
+
+poly = gpd.read_file(path+"/misti/empty_grid_misti.geojson")
+
+misti_geo2 = misti_geo.merge(poly, how="left", on="survey_id")
+misti_geo3 = gpd.GeoDataFrame(misti_geo2, crs="epsg:4326")
+
+###
+
+hazard_polygons = gpd.read_file(path+"/hazard_polygons.geojson")
+hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Typ"].isin(["MineField", "Suspected Minefield", "Converted From SHA"]), :]
+hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Cla"].isin(["CHA", "SHA"]), : ]
+hazard_polygons["Status_Cha"] = pd.to_datetime(hazard_polygons["Status_Cha"], format="%Y-%m-%d")
+hazard_polygons = hazard_polygons[["OBJECTID", "Status_1", "Status_Cha", "Status_C_1", "Hazard_Cla", "geometry"]]
+#hazard_polygons["hazard_area"] = hazard_polygons["geometry"].area
+
+###
+
+treatment = gpd.sjoin(misti_geo3[["survey_id", "geometry"]], hazard_polygons, how="left", op="intersects")
+treatment_cleared = treatment.loc[treatment["Status_1"]=="Expired", : ]
+
+
+a = treatment_cleared.groupby(["survey_id"], sort=False)["Status_Cha"].max()
+b = pd.DataFrame(a)
+b.reset_index(drop=True, inplace=True)
+misti_geo3["last_clearance_date"] = b
+
+misti_geo3["interview_date_form"] = pd.to_datetime(misti_geo3["interview_date"], format="%m-%d-%Y")
+
+time = misti_geo3["interview_date_form"].dt.to_period("M") - misti_geo3["last_clearance_date"].dt.to_period("M") 
+
+misti_geo3["months_since_clearance"] = time.apply(attrgetter('n'))
+
+not_cleared = (misti_geo3["total_ha"] - misti_geo3["num_cleared"])>0
+misti_geo3.loc[not_cleared, "months_since_clearance"] = np.nan
+
+misti_geo3.drop(["geometry"], axis=1).to_csv(path+"/misti/misti_panel_new.csv", index=False)
+
+test = misti_geo3.sample(100)
+test.to_file("/Users/christianbaehr/Downloads/misti.geojson", driver="GeoJSON")
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
