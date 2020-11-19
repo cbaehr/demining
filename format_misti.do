@@ -1,4 +1,4 @@
-local user = "c"
+local user = "r"
 
 if "`user'" == "c" {
 	global data "/Users/christianbaehr/Box Sync/demining/inputData/"
@@ -14,7 +14,10 @@ import delimited "misti_panel.csv", clear
 
 gen ha_count = total_ha-num_cleared
 
-//NEEED TO CHANGE HA_COUNT TO INDICATOR VARIABLE
+drop if ha_count2012 == 0
+
+gen all_cleared = .
+replace all_cleared = 0 if ha_count == 0
 
 ************
 
@@ -85,7 +88,7 @@ replace q29n = -1 if strpos(q29, "A little worried") > 0 | strpos(q29, "Very wor
 
 local lhs = "q28n q29n"
 local indexname = "q28_q29_index"
-local rhs = "ha_count"
+local rhs = "all_cleared"
 
 local i = 0
 foreach l in `lhs'{
@@ -173,7 +176,7 @@ replace q2bn = -2 if strpos(q2b, "Much less secure") > 0
 
 local lhs = "q2an q2bn"
 local indexname = "q2a_q2b_index"
-local rhs = "ha_count"
+local rhs = "all_cleared"
 
 local i = 0
 foreach l in `lhs'{
@@ -232,6 +235,21 @@ replace q3bn = -1 if strpos(q3b, "Worsened a little") > 0
 replace q3bn = -2 if strpos(q3b, "Worsened a lot") > 0
 
 *
+/*
+gen q4an = .
+replace q4an = 2 if strpos(q4a, "Very secure") > 0
+replace q4an = 1 if strpos(q4a, "Somewhat secure") > 0
+replace q4an = 0 if strpos(q4a, "Don't know") > 0
+replace q4an = -1 if strpos(q4a, "Somewhat insecure") > 0
+replace q4an = -2 if strpos(q4a, "Very insecure") > 0
+
+gen q4bn = .
+replace q4bn = 2 if strpos(q4b, "Very secure") > 0
+replace q4bn = 1 if strpos(q4b, "Somewhat secure") > 0
+replace q4bn = 0 if strpos(q4b, "Don't know") > 0
+replace q4bn = -1 if strpos(q4b, "Somewhat insecure") > 0
+replace q4bn = -2 if strpos(q4b, "Very insecure") > 0
+*/
 
 /*label define i 1 "Very secure" 2 "Somewhat secure" 3 "Somewhat insecure" 4 "Very insecure"
 
@@ -262,7 +280,7 @@ replace q4dn = -2 if strpos(q4d, "Very insecure") > 0
 
 local lhs = "q3bn q4cn q4dn"
 local indexname = "q3b_q4d_index"
-local rhs = "ha_count"
+local rhs = "all_cleared"
 
 local i = 0
 foreach l in `lhs'{
@@ -386,7 +404,7 @@ replace q11dn = -2 if strpos(q11d, "Worsened a lot") > 0
 
 local lhs = "q11an q11bn q11cn q11dn"
 local indexname = "q11a_q11d_index"
-local rhs = "ha_count"
+local rhs = "all_cleared"
 
 local i = 0
 foreach l in `lhs'{
@@ -495,7 +513,7 @@ replace q14gn = -1 if strpos(q14g, "The District Government does not deliver bas
 
 local lhs = "q14bn q14cn q14dn q14fn q14gn"
 local indexname = "q14b_q14f_index"
-local rhs = "ha_count"
+local rhs = "all_cleared"
 
 local i = 0
 foreach l in `lhs'{
@@ -649,7 +667,7 @@ replace q16in = -2 if strpos(q16i, "Very dissatisfied") > 0
 
 local lhs = "q16an q16bn q16cn q16dn q16en q16fn q16gn q16hn q16in"
 local indexname = "q16a_q16i_index"
-local rhs = "ha_count"
+local rhs = "all_cleared"
 
 local i = 0
 foreach l in `lhs'{
@@ -740,7 +758,7 @@ replace w1_q36fn = -1 if strpos(w1_q36f, "Less available") > 0
 
 local lhs = "w1_q36an w1_q36bn w1_q36cn w1_q36dn w1_q36fn"
 local indexname = "q36a_q36f_index"
-local rhs = "ha_count"
+local rhs = "all_cleared"
 
 local i = 0
 foreach l in `lhs'{
@@ -813,6 +831,102 @@ replace q33n = -1 if strpos(q33, "A little less") > 0
 replace q33n = -2 if strpos(q33, "A lot less") > 0
 
 ***
+
+//government satisfaction super-index
+
+local lhs = "q11an q11bn q11cn q11dn q14bn q14cn q14dn q14fn q14gn q16an q16bn q16cn q16dn q16en q16fn q16gn q16hn q16in"
+local indexname = "govtrust_super_index"
+local rhs = "all_cleared"
+
+local i = 0
+foreach l in `lhs'{
+	local i = `i' + 1
+	gen temp_`i' = `l'
+}
+
+local nvars = `i'
+forvalues i = 1/`nvars' {
+	su temp_`i' if `rhs' == 0 `sampand'
+	local mean = r(mean)
+	local sdev = r(sd)
+	gen temp_`i'_z = (temp_`i' - `mean')/`sdev'
+}
+
+correl temp_*z if `rhs' == 0 `sampand', covar
+local covcount = r(N)
+count if `rhs' == 0 `sampand'
+local controlcount = r(N)
+if `covcount'<`controlcount'/2 {
+	display "Correlation matrix is estimated using <50% of the sample, due to missing values in some components of the index."
+}
+
+matrix cov = r(C)
+matrix invcov = syminv(cov)
+matrix unity = J(rowsof(invcov), 1, 1)
+matrix weights = syminv(unity' * invcov * unity) * (unity' * invcov)
+
+svmat weights, names(weighttemp1)
+forvalues i = 1/`nvars' {
+	gen temp2_`i' = temp_`i'_z * weighttemp1`i'[1] `samp'
+}
+
+egen `indexname' = rowmean( temp2_* )
+summ `indexname' if (`rhs'==0)
+replace `indexname' = `indexname'/r(sd)
+label var `indexname' "`indexlabel'"
+
+drop weighttemp1*
+forvalues i=1/`nvars' {
+	drop temp_`i' temp2_`i' temp_`i'_z
+}
+
+//security super-index
+
+local lhs = "q2an q2bn q3bn q4cn q4dn"
+local indexname = "security_super_index"
+local rhs = "all_cleared"
+
+local i = 0
+foreach l in `lhs'{
+	local i = `i' + 1
+	gen temp_`i' = `l'
+}
+
+local nvars = `i'
+forvalues i = 1/`nvars' {
+	su temp_`i' if `rhs' == 0 `sampand'
+	local mean = r(mean)
+	local sdev = r(sd)
+	gen temp_`i'_z = (temp_`i' - `mean')/`sdev'
+}
+
+correl temp_*z if `rhs' == 0 `sampand', covar
+local covcount = r(N)
+count if `rhs' == 0 `sampand'
+local controlcount = r(N)
+if `covcount'<`controlcount'/2 {
+	display "Correlation matrix is estimated using <50% of the sample, due to missing values in some components of the index."
+}
+
+matrix cov = r(C)
+matrix invcov = syminv(cov)
+matrix unity = J(rowsof(invcov), 1, 1)
+matrix weights = syminv(unity' * invcov * unity) * (unity' * invcov)
+
+svmat weights, names(weighttemp1)
+forvalues i = 1/`nvars' {
+	gen temp2_`i' = temp_`i'_z * weighttemp1`i'[1] `samp'
+}
+
+egen `indexname' = rowmean( temp2_* )
+summ `indexname' if (`rhs'==0)
+replace `indexname' = `indexname'/r(sd)
+label var `indexname' "`indexlabel'"
+
+drop weighttemp1*
+forvalues i=1/`nvars' {
+	drop temp_`i' temp2_`i' temp_`i'_z
+}
 
 save "$data/misti_panel_formatted", replace
 
