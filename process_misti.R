@@ -1,4 +1,8 @@
 
+library(readxl)
+
+###
+
 file <- "/Users/christianbaehr/Box Sync/demining/inputData/misti/MISTI Wave1 Data File V3 CSV.csv"
 
 wave1 <- read.csv(file, stringsAsFactors = F)
@@ -33,7 +37,6 @@ write.csv(wave3, out_file, row.names = F)
 
 ###
 
-library(readxl)
 
 file <- "/Users/christianbaehr/Box Sync/demining/inputData/misti/MISTI W4 Data File FINAL V3 19-08-20142_XLS.xlsx"
 
@@ -135,7 +138,10 @@ wave5_merge <- merge(dat, wave5_geo, by="unique_id")
 
 misti_full <- rbind(wave1_merge, wave2_merge, wave3_merge, wave4_merge, wave5_merge)
 
-keep_cols <- c("m1", 
+misti_full$month_num <- match(misti_full$m8, month.name)
+misti_full$interview_date <- paste(misti_full$month_num, misti_full$m9, misti_full$m7, sep="-")
+
+keep_cols <- c("m1",
                "village",
                "i1",
                "i2",
@@ -149,6 +155,7 @@ keep_cols <- c("m1",
                "m7",
                "m8",
                "m9",
+               "interview_date",
                "m10",
                "m11.x",
                "m12",

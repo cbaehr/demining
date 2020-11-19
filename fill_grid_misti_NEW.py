@@ -1,5 +1,6 @@
 
 path = "/Users/christianbaehr/Box Sync/demining/inputData"
+out_path = "/Users/christianbaehr/Box Sync/demining/inputData"
 
 import fiona
 import geopandas as gpd

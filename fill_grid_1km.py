@@ -1,5 +1,6 @@
 
 path = "/Users/christianbaehr/Box Sync/demining/inputData"
+out_path = "/sciclone/scr20/cbaehr/demining"
 
 import fiona
 import geopandas as gpd
@@ -11,7 +12,7 @@ import numpy as np
 
 
 empty_grid = gpd.read_file(path+"/empty_grid_afg_trimmed.geojson")
-coords = [(x,y) for x, y in zip(empty_grid.longitude, empty_grid.latitude)]
+coords = [(x,y) for x, y in zip(empty_grid.lon, empty_grid.lat)]
 
 ###
 
