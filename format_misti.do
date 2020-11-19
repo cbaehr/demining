@@ -1,43 +1,87 @@
+local user = "r"
 
-global data "/Users/christianbaehr/Box Sync/demining/inputData"
+if "`user'" == "c" {
+	global data "/Users/christianbaehr/Box Sync/demining/inputData/"
+	global mistidata "misti/"
+}
+if "`user'" == "r" {
+	global data "C:\Users\rcsayers\Box\demining\inputData\"
+	global mistidata "${data}misti\"
+}
 
-import delimited "$data/misti/misti_panel.csv", clear
+cd "$mistidata"
+import delimited "misti_panel.csv", clear
 
 gen ha_count = total_ha-num_cleared
+
+//NEEED TO CHANGE HA_COUNT TO INDICATOR VARIABLE
 
 
 levelsof q1
 
 ************
 
-label define a 1 "Right direction (a lot)" 2 "Right direction (a little)" 3 "Wrong direction (a little)" 4 "Wrong direction (a lot)"
+/*label define a 1 "Right direction (a lot)" 2 "Right direction (a little)" 3 "Wrong direction (a little)" 4 "Wrong direction (a lot)"
 
 encode q1, generate(q1n) label(a)
-replace q1n = . if q1n>4
+replace q1n = . if q1n>4*/
+
+gen q1n = .
+replace q1n = 2 if strpos(q1, "Right direction (a lot)") > 0
+replace q1n = 1 if strpos(q1, "Right direction (a little)") > 0
+replace q1n = 0 if strpos(q1, "Neither right nor wrong") > 0 | strpos(q1, "Don't Know'") > 0
+replace q1n = -1 if strpos(q1, "Wrong direction (a little)") > 0
+replace q1n = -2 if strpos(q1, "Wrong direction (a lot)") > 0
 
 *
 
-label define b 1 "Very satisfied" 2 "Somewhat satisfied" 3 "Somewhat dissatisfied" 4 "Very dissatisfied"
+/*label define b 1 "Very satisfied" 2 "Somewhat satisfied" 3 "Somewhat dissatisfied" 4 "Very dissatisfied"
 
 encode q26, generate(q26n) label(b)
-replace q26n = . if q26n>4
+replace q26n = . if q26n>4*/
+
+gen q26n = .
+replace q26n = 2 if strpos(q26, "Very satisfied") > 0
+replace q26n = 1 if strpos(q26, "Somewhat satisfied") > 0
+replace q26n = 0 if strpos(q26, "Don't Know") > 0
+replace q26n = -1 if strpos(q26, "Somewhat dissatisfied") > 0
+replace q26n = -2 if strpos(q26, "Very dissatisfied") > 0
 
 *
 
-encode q27, generate(q27n) label(b)
-replace q27n = . if q27n>4
+/*encode q27, generate(q27n) label(b)
+replace q27n = . if q27n>4*/
+
+gen q27n = .
+replace q27n = 2 if strpos(q27, "Very satisfied") > 0
+replace q27n = 1 if strpos(q27, "Somewhat satisfied") > 0
+replace q27n = 0 if strpos(q27, "Don't Know") > 0
+replace q27n = -1 if strpos(q27, "Somewhat dissatisfied") > 0
+replace q27n = -2 if strpos(q27, "Very dissatisfied") > 0
 
 *
 
-label define c 1 "Increased a lot" 2 "Increased a little" 3 "Decreased a little" 4 "Decreased a lot"
+/*label define c 1 "Increased a lot" 2 "Increased a little" 3 "Decreased a little" 4 "Decreased a lot"
 
 encode q28, generate(q28n) label(c)
-replace q28n = . if q28n>4
+replace q28n = . if q28n>4*/
 
-label define d 1 "Not worried" 2 "A little worried" 3 "Very worried"
+gen q28n = .
+replace q28n = 2 if strpos(q28, "Increased a lot") > 0
+replace q28n = 1 if strpos(q28, "Increased a little") > 0
+replace q28n = 0 if strpos(q28, "Stayed about the same") > 0 | strpos(q28, "Don't Know") > 0
+replace q28n = -1 if strpos(q28, "Decreased a little") > 0
+replace q28n = -2 if strpos(q28, "Decreased a lot") > 0
+
+/*label define d 1 "Not worried" 2 "A little worried" 3 "Very worried"
 
 encode q29, generate(q29n) label(d)
-replace q29n = . if q29n>3
+replace q29n = . if q29n>3*/
+
+gen q29n = .
+replace q29n = 1 if strpos(q29, "Not worried") > 0
+replace q29n = 0 if strpos(q29, "Don't Know") > 0
+replace q29n = -1 if strpos(q29, "A little worried") > 0 | strpos(q29, "Very worried") > 0
 
 ***
 
@@ -89,24 +133,43 @@ forvalues i=1/`nvars' {
 
 ************
 
-label define e 1 "The situation in this area is certain enough for me to make plans for my future" 2 "The situation in this area is too uncertain for me to make plans for my future"
+/*label define e 1 "The situation in this area is certain enough for me to make plans for my future" 2 "The situation in this area is too uncertain for me to make plans for my future"
 
 encode q30, generate(q30n) label(e)
-replace q30n = . if q30n>2
+replace q30n = . if q30n>2*/
+
+gen q30n = .
+replace q30n = 1 if strpos(q30, "The situation in this area is certain enough") > 0
+replace q30n = 0 if strpos(q30, "Don't Know") > 0
+replace q30n = -1 if strpos(q30, "The situation in this area is too uncertain") > 0
 
 *
 
-label define f 1 "Very good" 2 "Good" 3 "Fair" 4 "Poor" 5 "Very poor"
+/*label define f 1 "Very good" 2 "Good" 3 "Fair" 4 "Poor" 5 "Very poor"
 
 encode q2a, generate(q2an) label(f)
-replace q2an = . if q2an>5
+replace q2an = . if q2an>5*/
+
+gen q2an = .
+replace q2an = 2 if strpos(q2a, "Very good") > 0
+replace q2an = 1 if strpos(q2a, "Good") > 0
+replace q2an = 0 if strpos(q2a, "Fair") > 0 | strpos(q2a, "Don't Know") > 0
+replace q2an = -1 if strpos(q2a, "Poor") > 0
+replace q2an = -2 if strpos(q2a, "Very poor") > 0
 
 *
 
-label define g 1 "Much more secure" 2 "Somewhat more secure" 3 "About the same" 4 "Somewhat less secure" 5 "Much less secure"
+/*label define g 1 "Much more secure" 2 "Somewhat more secure" 3 "About the same" 4 "Somewhat less secure" 5 "Much less secure"
 
 encode q2b, generate(q2bn) label(g)
-replace q2bn = . if q2bn>5
+replace q2bn = . if q2bn>5*/
+
+gen q2bn = .
+replace q2bn = 2 if strpos(q2b, "Much more secure") > 0
+replace q2bn = 1 if strpos(q2b, "Somewhat more secure") > 0
+replace q2bn = 0 if strpos(q2b, "About the same") > 0 | strpos(q2b, "Don't know") > 0
+replace q2bn = -1 if strpos(q2b, "Somewhat less secure") > 0
+replace q2bn = -2 if strpos(q2b, "Much less secure") > 0
 
 ***
 
@@ -158,22 +221,44 @@ forvalues i=1/`nvars' {
 
 ************
 
-label define h 1 "Improved a lot" 2 "Improved a little" 3 "Stayed the same" 4 "Worsened a little" 5 "Worsened a lot"
+/*label define h 1 "Improved a lot" 2 "Improved a little" 3 "Stayed the same" 4 "Worsened a little" 5 "Worsened a lot"
 
 encode q3b, generate(q3bn) label(h)
-replace q3bn = . if q3bn>5
+replace q3bn = . if q3bn>5*/
+
+gen q3bn = .
+replace q3bn = 2 if strpos(q3b, "Improved a lot") > 0
+replace q3bn = 1 if strpos(q3b, "Improved a little") > 0
+replace q3bn = 0 if strpos(q3b, "Stayed the same") > 0 | strpos(q3b, "Don't know") > 0
+replace q3bn = -1 if strpos(q3b, "Worsened a little") > 0
+replace q3bn = -2 if strpos(q3b, "Worsened a lot") > 0
 
 *
 
-label define i 1 "Very secure" 2 "Somewhat secure" 3 "Somewhat insecure" 4 "Very insecure"
+/*label define i 1 "Very secure" 2 "Somewhat secure" 3 "Somewhat insecure" 4 "Very insecure"
 
 encode q4c, generate(q4cn) label(i)
-replace q4cn = . if q4cn>4
+replace q4cn = . if q4cn>4*/
+
+gen q4cn = .
+replace q4cn = 2 if strpos(q4c, "Very secure") > 0
+replace q4cn = 1 if strpos(q4c, "Somewhat secure") > 0
+replace q4cn = 0 if strpos(q4c, "Don't know") > 0
+replace q4cn = -1 if strpos(q4c, "Somewhat insecure") > 0
+replace q4cn = -2 if strpos(q4c, "Very insecure") > 0
 
 *
 
-encode q4d, generate(q4dn) label(i)
-replace q4dn = . if q4dn>4
+/*encode q4d, generate(q4dn) label(i)
+replace q4dn = . if q4dn>4*/
+
+gen q4dn = .
+replace q4dn = 2 if strpos(q4d, "Very secure") > 0
+replace q4dn = 1 if strpos(q4d, "Somewhat secure") > 0
+replace q4dn = 0 if strpos(q4d, "Don't know") > 0
+replace q4dn = -1 if strpos(q4d, "Somewhat insecure") > 0
+replace q4dn = -2 if strpos(q4d, "Very insecure") > 0
+
 
 ***
 
@@ -225,37 +310,79 @@ forvalues i=1/`nvars' {
 
 ************
 
-label define j 1 "Much better" 2 "A little better" 3 "About the same" 4 "A little worse" 5 "Much worse"
+/*label define j 1 "Much better" 2 "A little better" 3 "About the same" 4 "A little worse" 5 "Much worse"
 
 encode q31, generate(q31n) label(j)
-replace q31n = . if q31n>5
+replace q31n = . if q31n>5*/
+
+gen q31n = .
+replace q31n = 2 if strpos(q31, "Much better") > 0
+replace q31n = 1 if strpos(q31, "A little better") > 0
+replace q31n = 0 if strpos(q31, "About the same") > 0 | strpos(q31, "Don't Know") > 0
+replace q31n = -1 if strpos(q31, "A little worse") > 0
+replace q31n = -2 if strpos(q31, "Much worse") > 0
 
 *
 
-label define k 1 "More available" 2 "About the same" 3 "Less available" 4 "Have not been available (vol.)"
+/*label define k 1 "More available" 2 "About the same" 3 "Less available" 4 "Have not been available (vol.)"
 
 encode w1_q36e, generate(w1_q36en) label(k)
-replace w1_q36en = . if w1_q36en>4
+replace w1_q36en = . if w1_q36en>4*/
+
+gen w1_q36en = .
+replace w1_q36en = 1 if strpos(w1_q36e, "More available") > 0
+replace w1_q36en = 0 if strpos(w1_q36e, "About the same") > 0 | strpos(w1_q36e, "Don't Know") > 0 | strpos(w1_q36e, "Have not been available") > 0
+replace w1_q36en = -1 if strpos(w1_q36e, "Less available") > 0
+
 
 * 
 
-encode q11a, generate(q11an) label(h)
-replace q11an = . if q11an>5
+/*encode q11a, generate(q11an) label(h)
+replace q11an = . if q11an>5*/
+
+gen q11an = .
+replace q11an = 2 if strpos(q11a, "Improved a lot") > 0
+replace q11an = 1 if strpos(q11a, "Improved a little") > 0
+replace q11an = 0 if strpos(q11a, "Stayed the same") > 0 | strpos(q11a, "Don't know") > 0
+replace q11an = -1 if strpos(q11a, "Worsened a little") > 0
+replace q11an = -2 if strpos(q11a, "Worsened a lot") > 0
 
 *
 
-encode q11b, generate(q11bn) label(h)
-replace q11bn = . if q11bn>5
+/*encode q11b, generate(q11bn) label(h)
+replace q11bn = . if q11bn>5*/
+
+gen q11bn = .
+replace q11bn = 2 if strpos(q11b, "Improved a lot") > 0
+replace q11bn = 1 if strpos(q11b, "Improved a little") > 0
+replace q11bn = 0 if strpos(q11b, "Stayed the same") > 0 | strpos(q11b, "Don't know") > 0
+replace q11bn = -1 if strpos(q11b, "Worsened a little") > 0
+replace q11bn = -2 if strpos(q11b, "Worsened a lot") > 0
+
 
 *
 
-encode q11c, generate(q11cn) label(h)
-replace q11cn = . if q11cn>5
+/*encode q11c, generate(q11cn) label(h)
+replace q11cn = . if q11cn>5*/
+
+gen q11cn = .
+replace q11cn = 2 if strpos(q11c, "Improved a lot") > 0
+replace q11cn = 1 if strpos(q11c, "Improved a little") > 0
+replace q11cn = 0 if strpos(q11c, "Stayed the same") > 0 | strpos(q11c, "Don't know") > 0
+replace q11cn = -1 if strpos(q11c, "Worsened a little") > 0
+replace q11cn = -2 if strpos(q11c, "Worsened a lot") > 0
 
 *
 
-encode q11d, generate(q11dn) label(h)
-replace q11dn = . if q11dn>5
+/*encode q11d, generate(q11dn) label(h)
+replace q11dn = . if q11dn>5*/
+
+gen q11dn = .
+replace q11dn = 2 if strpos(q11d, "Improved a lot") > 0
+replace q11dn = 1 if strpos(q11d, "Improved a little") > 0
+replace q11dn = 0 if strpos(q11d, "Stayed the same") > 0 | strpos(q11d, "Don't know") > 0
+replace q11dn = -1 if strpos(q11d, "Worsened a little") > 0
+replace q11dn = -2 if strpos(q11d, "Worsened a lot") > 0
 
 ***
 
