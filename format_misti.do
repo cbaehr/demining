@@ -16,12 +16,10 @@ gen ha_count = total_ha-num_cleared
 
 //NEEED TO CHANGE HA_COUNT TO INDICATOR VARIABLE
 
-
-levelsof q1
-
 ************
 
-/*label define a 1 "Right direction (a lot)" 2 "Right direction (a little)" 3 "Wrong direction (a little)" 4 "Wrong direction (a lot)"
+/*levelsof q1
+label define a 1 "Right direction (a lot)" 2 "Right direction (a little)" 3 "Wrong direction (a little)" 4 "Wrong direction (a lot)"
 
 encode q1, generate(q1n) label(a)
 replace q1n = . if q1n>4*/
@@ -434,38 +432,64 @@ forvalues i=1/`nvars' {
 
 ************
 
-label define l 1 "The district government understands the problems of people in this area." 2 "The district government does not understand the problems of people in this area."
+/*label define l 1 "The district government understands the problems of people in this area." 2 "The district government does not understand the problems of people in this area."
 
 encode q14b, generate(q14bn) label(l)
-replace q14bn = . if q14bn>2
+replace q14bn = . if q14bn>2*/
+
+gen q14bn = .
+replace q14bn = 1 if strpos(q14b, "The district government understands") > 0
+replace q14bn = 0 if strpos(q14b, "Don't Know") > 0
+replace q14bn = -1 if strpos(q14b, "The district government does not understand") > 0
 
 *
 
-label define m 1 "The district government cares about the people in this area" 2 "The district government does not care about the people in this area"
+/*label define m 1 "The district government cares about the people in this area" 2 "The district government does not care about the people in this area"
 
 encode q14c, generate(q14cn) label(m)
-replace q14cn = . if q14cn>2
+replace q14cn = . if q14cn>2*/
+
+gen q14cn = .
+replace q14cn = 1 if strpos(q14c, "The district government cares") > 0
+replace q14cn = 0 if strpos(q14c, "Don't Know") > 0
+replace q14cn = -1 if strpos(q14c, "The district government does not care") > 0
 
 *
 
-label define n 1 "District Government officials in this district do not abuse their authority to make money for themselves" 2 "District Government officials in this district abuse their authority to make money for themselves"
+/*label define n 1 "District Government officials in this district do not abuse their authority to make money for themselves" 2 "District Government officials in this district abuse their authority to make money for themselves"
 
 encode q14d, generate(q14dn) label(n)
-replace q14dn = . if q14dn>2
+replace q14dn = . if q14dn>2*/
+
+gen q14dn = .
+replace q14dn = 1 if strpos(q14d, "District Government officials in this district do not abuse") > 0
+replace q14dn = 0 if strpos(q14d, "Don't Know") > 0
+replace q14dn = -1 if strpos(q14d, "District Government officials in this district abuse") > 0
 
 *
 
-label define o 1 "In general, the district government officials are doing their jobs honestly" 2 "In general, the district government officials are not doing their jobs honestly"
+/*label define o 1 "In general, the district government officials are doing their jobs honestly" 2 "In general, the district government officials are not doing their jobs honestly"
 
 encode q14f, generate(q14fn) label(o)
-replace q14fn = . if q14fn>2
+replace q14fn = . if q14fn>2*/
+
+gen q14fn = .
+replace q14fn = 1 if strpos(q14f, "In general, the district government officials are doing their jobs honestly") > 0
+replace q14fn = 0 if strpos(q14f, "Don't Know") > 0
+replace q14fn = -1 if strpos(q14f, "In general, the district government officials are not doing their jobs honestly") > 0
 
 *
 
-label define p 1 "The District Government delivers basic services to this area in a fair manner" 2 "The District Government does not deliver basic services to this area in a fair manner"
+/*label define p 1 "The District Government delivers basic services to this area in a fair manner" 2 "The District Government does not deliver basic services to this area in a fair manner"
 
 encode q14g, generate(q14gn) label(p)
-replace q14gn = . if q14gn>2
+replace q14gn = . if q14gn>2*/
+
+gen q14gn = .
+replace q14gn = 1 if strpos(q14g, "The District Government delivers basic services to this area in a fair manner") > 0
+replace q14gn = 0 if strpos(q14g, "Don't Know") > 0
+replace q14gn = -1 if strpos(q14g, "The District Government does not deliver basic services to this area in a fair manner") > 0
+
 
 ***
 
@@ -517,39 +541,109 @@ forvalues i=1/`nvars' {
 
 ************
 
-encode q15, generate(q15n) label(h)
-replace q15n = . if q15n>5
+/*encode q15, generate(q15n) label(h)
+replace q15n = . if q15n>5*/
+
+gen q15n = .
+replace q15n = 2 if strpos(q15, "Improved a lot") > 0
+replace q15n = 1 if strpos(q15, "Improved a little") > 0
+replace q15n = 0 if strpos(q15, "Not changed") > 0 | strpos(q15, "Don't Know") > 0
+replace q15n = -1 if strpos(q15, "Worsened a little") > 0
+replace q15n = -2 if strpos(q15, "Worsened a lot") > 0
 
 *
 
-label define q 1 "Very satisfied" 2 "Somewhat satisfied" 3 "Somewhat dissatisfied" 4 "Very dissatisfied"
+/*label define q 1 "Very satisfied" 2 "Somewhat satisfied" 3 "Somewhat dissatisfied" 4 "Very dissatisfied"
 
 encode q16a, generate(q16an) label(q)
-replace q16an = . if q16an>4
+replace q16an = . if q16an>4*/
 
-encode q16b, generate(q16bn) label(q)
-replace q16bn = . if q16bn>4
+gen q16an = .
+replace q16an = 2 if strpos(q16a, "Very satisfied") > 0
+replace q16an = 1 if strpos(q16a, "Somewhat satisfied") > 0
+replace q16an = 0 if strpos(q16a, "Don't Know") > 0 | strpos(q16a, "Service not provided") > 0
+replace q16an = -1 if strpos(q16a, "Somewhat dissatisfied") > 0
+replace q16an = -2 if strpos(q16a, "Very dissatisfied") > 0
 
-encode q16c, generate(q16cn) label(q)
-replace q16cn = . if q16cn>4
+/*encode q16b, generate(q16bn) label(q)
+replace q16bn = . if q16bn>4*/
 
-encode q16d, generate(q16dn) label(q)
-replace q16dn = . if q16dn>4
+gen q16bn = .
+replace q16bn = 2 if strpos(q16b, "Very satisfied") > 0
+replace q16bn = 1 if strpos(q16b, "Somewhat satisfied") > 0
+replace q16bn = 0 if strpos(q16b, "Don't Know") > 0 | strpos(q16b, "Service not provided") > 0
+replace q16bn = -1 if strpos(q16b, "Somewhat dissatisfied") > 0
+replace q16bn = -2 if strpos(q16b, "Very dissatisfied") > 0
 
-encode q16e, generate(q16en) label(q)
-replace q16en = . if q16en>4
+/*encode q16c, generate(q16cn) label(q)
+replace q16cn = . if q16cn>4*/
 
-encode q16f, generate(q16fn) label(q)
-replace q16fn = . if q16fn>4
+gen q16cn = .
+replace q16cn = 2 if strpos(q16c, "Very satisfied") > 0
+replace q16cn = 1 if strpos(q16c, "Somewhat satisfied") > 0
+replace q16cn = 0 if strpos(q16c, "Don't Know") > 0 | strpos(q16c, "Service not provided") > 0
+replace q16cn = -1 if strpos(q16c, "Somewhat dissatisfied") > 0
+replace q16cn = -2 if strpos(q16c, "Very dissatisfied") > 0
 
-encode q16g, generate(q16gn) label(q)
-replace q16gn = . if q16gn>4
+/*encode q16d, generate(q16dn) label(q)
+replace q16dn = . if q16dn>4*/
 
-encode q16h, generate(q16hn) label(q)
-replace q16hn = . if q16hn>4
+gen q16dn = .
+replace q16dn = 2 if strpos(q16d, "Very satisfied") > 0
+replace q16dn = 1 if strpos(q16d, "Somewhat satisfied") > 0
+replace q16dn = 0 if strpos(q16d, "Don't Know") > 0 | strpos(q16d, "Service not provided") > 0
+replace q16dn = -1 if strpos(q16d, "Somewhat dissatisfied") > 0
+replace q16dn = -2 if strpos(q16d, "Very dissatisfied") > 0
 
-encode q16i, generate(q16in) label(q)
-replace q16in = . if q16in>4
+/*encode q16e, generate(q16en) label(q)
+replace q16en = . if q16en>4*/
+
+gen q16en = .
+replace q16en = 2 if strpos(q16e, "Very satisfied") > 0
+replace q16en = 1 if strpos(q16e, "Somewhat satisfied") > 0
+replace q16en = 0 if strpos(q16e, "Don't Know") > 0 | strpos(q16e, "Service not provided") > 0
+replace q16en = -1 if strpos(q16e, "Somewhat dissatisfied") > 0
+replace q16en = -2 if strpos(q16e, "Very dissatisfied") > 0
+
+/*encode q16f, generate(q16fn) label(q)
+replace q16fn = . if q16fn>4*/
+
+gen q16fn = .
+replace q16fn = 2 if strpos(q16f, "Very satisfied") > 0
+replace q16fn = 1 if strpos(q16f, "Somewhat satisfied") > 0
+replace q16fn = 0 if strpos(q16f, "Don't Know") > 0 | strpos(q16f, "Service not provided") > 0
+replace q16fn = -1 if strpos(q16f, "Somewhat dissatisfied") > 0
+replace q16fn = -2 if strpos(q16f, "Very dissatisfied") > 0
+
+/*encode q16g, generate(q16gn) label(q)
+replace q16gn = . if q16gn>4*/
+
+gen q16gn = .
+replace q16gn = 2 if strpos(q16g, "Very satisfied") > 0
+replace q16gn = 1 if strpos(q16g, "Somewhat satisfied") > 0
+replace q16gn = 0 if strpos(q16g, "Don't Know") > 0 | strpos(q16g, "Service not provided") > 0
+replace q16gn = -1 if strpos(q16g, "Somewhat dissatisfied") > 0
+replace q16gn = -2 if strpos(q16g, "Very dissatisfied") > 0
+
+/*encode q16h, generate(q16hn) label(q)
+replace q16hn = . if q16hn>4*/
+
+gen q16hn = .
+replace q16hn = 2 if strpos(q16h, "Very satisfied") > 0
+replace q16hn = 1 if strpos(q16h, "Somewhat satisfied") > 0
+replace q16hn = 0 if strpos(q16h, "Don't Know") > 0 | strpos(q16h, "Service not provided") > 0
+replace q16hn = -1 if strpos(q16h, "Somewhat dissatisfied") > 0
+replace q16hn = -2 if strpos(q16h, "Very dissatisfied") > 0
+
+/*encode q16i, generate(q16in) label(q)
+replace q16in = . if q16in>4*/*/
+
+gen q16in = .
+replace q16in = 2 if strpos(q16i, "Very satisfied") > 0
+replace q16in = 1 if strpos(q16i, "Somewhat satisfied") > 0
+replace q16in = 0 if strpos(q16i, "Don't Know") > 0 | strpos(q16i, "Service not provided") > 0
+replace q16in = -1 if strpos(q16i, "Somewhat dissatisfied") > 0
+replace q16in = -2 if strpos(q16i, "Very dissatisfied") > 0
 
 ***
 
@@ -601,20 +695,45 @@ forvalues i=1/`nvars' {
 
 ************
 
-encode w1_q36a, generate(w1_q36an) label(k)
-replace w1_q36an = . if w1_q36an>4
+/*encode w1_q36a, generate(w1_q36an) label(k)
+replace w1_q36an = . if w1_q36an>4*/
 
-encode w1_q36b, generate(w1_q36bn) label(k)
-replace w1_q36bn = . if w1_q36bn>4
+gen w1_q36an = .
+replace w1_q36an = 1 if strpos(w1_q36a, "More available") > 0
+replace w1_q36an = 0 if strpos(w1_q36a, "About the same") > 0 | strpos(w1_q36a, "Don't Know") > 0 | strpos(w1_q36a, "Have not been available") > 0
+replace w1_q36an = -1 if strpos(w1_q36a, "Less available") > 0
 
-encode w1_q36c, generate(w1_q36cn) label(k)
-replace w1_q36cn = . if w1_q36cn>4
+/*encode w1_q36b, generate(w1_q36bn) label(k)
+replace w1_q36bn = . if w1_q36bn>4*/
 
-encode w1_q36d, generate(w1_q36dn) label(k)
-replace w1_q36dn = . if w1_q36dn>4
+gen w1_q36bn = .
+replace w1_q36bn = 1 if strpos(w1_q36b, "More available") > 0
+replace w1_q36bn = 0 if strpos(w1_q36b, "About the same") > 0 | strpos(w1_q36b, "Don't Know") > 0 | strpos(w1_q36b, "Have not been available") > 0
+replace w1_q36bn = -1 if strpos(w1_q36b, "Less available") > 0
 
-encode w1_q36f, generate(w1_q36fn) label(k)
-replace w1_q36fn = . if w1_q36fn>4
+/*encode w1_q36c, generate(w1_q36cn) label(k)
+replace w1_q36cn = . if w1_q36cn>4*/
+
+gen w1_q36cn = .
+replace w1_q36cn = 1 if strpos(w1_q36c, "More available") > 0
+replace w1_q36cn = 0 if strpos(w1_q36c, "About the same") > 0 | strpos(w1_q36c, "Don't Know") > 0 | strpos(w1_q36c, "Have not been available") > 0
+replace w1_q36cn = -1 if strpos(w1_q36c, "Less available") > 0
+
+/*encode w1_q36d, generate(w1_q36dn) label(k)
+replace w1_q36dn = . if w1_q36dn>4*/
+
+gen w1_q36dn = .
+replace w1_q36dn = 1 if strpos(w1_q36d, "More available") > 0
+replace w1_q36dn = 0 if strpos(w1_q36d, "About the same") > 0 | strpos(w1_q36d, "Don't Know") > 0 | strpos(w1_q36d, "Have not been available") > 0
+replace w1_q36dn = -1 if strpos(w1_q36d, "Less available") > 0
+
+/*encode w1_q36f, generate(w1_q36fn) label(k)
+replace w1_q36fn = . if w1_q36fn>4*/
+
+gen w1_q36fn = .
+replace w1_q36fn = 1 if strpos(w1_q36f, "More available") > 0
+replace w1_q36fn = 0 if strpos(w1_q36f, "About the same") > 0 | strpos(w1_q36f, "Don't Know") > 0 | strpos(w1_q36f, "Have not been available") > 0
+replace w1_q36fn = -1 if strpos(w1_q36f, "Less available") > 0
 
 
 ***
@@ -667,17 +786,31 @@ forvalues i=1/`nvars' {
 
 ************
 
-encode q32, generate(q32n) label(c)
-replace q32n = . if q32n>4
+/*encode q32, generate(q32n) label(c)
+replace q32n = . if q32n>4*/
+
+gen q32n = .
+replace q32n = 2 if strpos(q32, "Increased a lot") > 0
+replace q32n = 1 if strpos(q32, "Increased a little") > 0
+replace q32n = 0 if strpos(q32, "Stayed about the same") > 0 | strpos(q32, "Don't Know") > 0
+replace q32n = -1 if strpos(q32, "Decreased a little") > 0
+replace q32n = -2 if strpos(q32, "Decreased a lot") > 0
 
 *
 
-label define r 1 "A lot more" 2 "A little more" 3 "About the same" 4 "A little less" 5 "A lot less"
+/*label define r 1 "A lot more" 2 "A little more" 3 "About the same" 4 "A little less" 5 "A lot less"
 
 encode q33, generate(q33n) label(r)
 replace q33n = . if q33n>5
 
-levelsof q33
+levelsof q33*/
+
+gen q33n = .
+replace q33n = 2 if strpos(q33, "A lot more") > 0
+replace q33n = 1 if strpos(q33, "A little more") > 0
+replace q33n = 0 if strpos(q33, "About the same") > 0 | strpos(q33, "Don't Know") > 0
+replace q33n = -1 if strpos(q33, "A little less") > 0
+replace q33n = -2 if strpos(q33, "A lot less") > 0
 
 ***
 
