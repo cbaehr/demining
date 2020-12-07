@@ -1,4 +1,4 @@
-local user = "r"
+local user = "c"
 
 if "`user'" == "c" {
 	global data "/Users/christianbaehr/Box Sync/demining/inputData/"
@@ -10,14 +10,15 @@ if "`user'" == "r" {
 }
 
 cd "$mistidata"
-import delimited "misti_panel.csv", clear
+import delimited "misti_panel_new.csv", clear
 
-gen ha_count = total_ha-num_cleared
+*gen ha_count = total_ha-num_cleared
 
-drop if ha_count2012 == 0
+*drop if ha_count2012 == 0
 
-gen all_cleared = .
-replace all_cleared = 0 if ha_count == 0
+gen all_cleared_1km = .
+replace all_cleared_1km = 0 if missing(months_since_clearance_1km)
+replace all_cleared_1km = 1 if months_since_clearance_1km>0 & !missing(months_since_clearance_1km)
 
 ************
 
@@ -654,7 +655,7 @@ replace q16hn = -1 if strpos(q16h, "Somewhat dissatisfied") > 0
 replace q16hn = -2 if strpos(q16h, "Very dissatisfied") > 0
 
 /*encode q16i, generate(q16in) label(q)
-replace q16in = . if q16in>4*/*/
+replace q16in = . if q16in>4*/
 
 gen q16in = .
 replace q16in = 2 if strpos(q16i, "Very satisfied") > 0

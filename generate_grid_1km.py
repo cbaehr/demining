@@ -6,10 +6,9 @@ out_path = "/Users/christianbaehr/Box Sync/demining/inputData"
 
 import itertools
 import rasterio
-from shapely.geometry import box
 import geopandas as gpd
 import pandas as pd
-from shapely.geometry import Point, shape
+from shapely.geometry import Point, shape, box
 from shapely.prepared import prep
 import fiona
 
@@ -33,12 +32,10 @@ with rasterio.open(sample_raster) as dataset:
         y_min = y_max + move_y
         polygons.append(box(x_min, y_min, x_max, y_max))
 
-
 #Extract the data
 data_list = []
 for x,y in indices:
     data_list.append(data[y,x])
-
 
 #Combine in a GeoDataFrame using geopandas
 gdf = gpd.GeoDataFrame(data=data_list, crs="epsg:4326", geometry=polygons, columns=['value'])
@@ -46,59 +43,47 @@ cent = gdf.centroid
 gdf["lon"] = cent.x
 gdf["lat"] = cent.y
 
-gdf.reset_index(inplace=True)
+gdf.reset_index(inplace=True, drop=True)
 
 gdf["cell_id"] = gdf.index+1
 
+
 ##########
 
-#hazard_polygons = gpd.read_file(path+"/hazard_polygons.geojson")
-#hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Typ"].isin(["MineField", "Suspected Minefield", "Converted From SHA"]), :]
-#hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Cla"].isin(["CHA", "SHA"]), : ]
+hazard_polygons = gpd.read_file(path+"/hazard_polygons.geojson")
+hazard_polygons.crs="epsg:4326"
+hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Cla"].isin(["CHA", "SHA"]), : ]
+hazard_polygons["country"] = "Afghanistan"
+hazard_polygons_mineonly = hazard_polygons.loc[hazard_polygons["Hazard_Typ"].isin(["MineField", "Suspected Minefield", "Converted From SHA"]), :]
 
-#hazard_polygons["country"] = "Afghanistan"
-#hazard_dissolve = hazard_polygons.dissolve(by="country")
-#hazard_outline = hazard_dissolve.buffer(0.015)
-#hazard_outline.to_file(path+"/hazard_outline.geojson", driver="GeoJSON")
-#hazard_dissolve = hazard_dissolve.buffer(0)
+hazard_dissolve_mineonly = hazard_polygons_mineonly.buffer(0)
+hazard_dissolve_mineonly = gpd.GeoDataFrame(hazard_polygons_mineonly, crs="epsg:4326", geometry=hazard_dissolve_mineonly)
+hazard_dissolve_mineonly = hazard_dissolve_mineonly.dissolve(by="country")
 #hazard_dissolve.to_file(path+"/hazard_dissolve.geojson", driver="GeoJSON")
 
-boundary = fiona.open(path+"/hazard_outline.geojson")
-boundary = boundary[0]
-boundary = shape(boundary["geometry"])
-prep_boundary = prep(boundary)
 
-boundary_col = []
-
-for _, row in gdf.iterrows():
-    c = Point(row['lon'], row['lat'])
-    boundary_col.append(prep_boundary.intersects(c))
-
-gdf["temp"] = boundary_col
-gdf = gdf.loc[gdf["temp"]==True, :]
-
-
+gdf2 = gpd.sjoin(gdf, hazard_dissolve_mineonly, how="left", op="intersects")
+gdf2 = gdf2.loc[~gdf2["Hazard_ID"].isnull(), :]
+gdf=gdf2
 gdf = gdf[["cell_id", "lon", "lat", "geometry"]]
 gdf.reset_index(drop=True, inplace=True)
 
-gdf.to_file(out_path+"/empty_grid_afg.geojson", driver="GeoJSON")
-
 
 ##########
 
-#gdf3.to_file(path+"/empty_grid_afg.geojson", driver="GeoJSON")
-#gdf3 = gpd.read_file(path+"/empty_grid_afg.geojson")
 
 gdf["merge_id"] = gdf.index
 
-path1 = out_path+"/empty_grid_afg.geojson"
-path2 = path+"/hazard_dissolve.geojson"
+#path1 = out_path+"/empty_grid_afg.geojson"
 
-polygon1 = fiona.open(path1)
-polygon2 = fiona.open(path2)
+#polygon1 = fiona.open(path1)
+#polygon2 = fiona.open(path+"/hazard_dissolve.geojson")
 
-geom_p1 = [ shape(feat["geometry"]) for feat in polygon1 ]
-geom_p2 = [ shape(feat["geometry"]) for feat in polygon2 ]
+geom_p1 = [ shape(feat) for feat in gdf["geometry"]]
+geom_p2 = [ shape(feat) for feat in hazard_dissolve_mineonly["geometry"]]
+
+#geom_p1 = [ shape(feat["geometry"]) for feat in polygon1 ]
+#geom_p2 = [ shape(feat["geometry"]) for feat in polygon2 ]
 
 g2 = geom_p2[0]
 g1_area = geom_p1[0].area
@@ -109,43 +94,39 @@ for i, g1 in enumerate(geom_p1):
     a = (g1.intersection(g2).area/g1_area) * 100
     pct_covered = pct_covered + [a]
 
-#gdf3.merge(df1, on="merge_id", inplace=True)
-#gdf3 = pd.concat([gdf3, df1.drop(["merge_id"], axis=1)], axis=1)
-
-
-##########
-
-gdf["pct_area"] = pct_covered
-#gdf4 = pd.concat([gdf3, df1.drop(["merge_id"], axis=1), df2.drop(["merge_id"], axis=1), df3.drop(["merge_id"], axis=1)], axis=1)
-#gdf4 = gdf3.merge(df, how="left", on="merge_id")
-#gdf.loc[gdf["pct_area_y"].isnull(), "pct_area_y"] = 0
-#gdf.drop(["merge_id"], axis=1, inplace=True)
+gdf["pct_area_mined"] = pct_covered
 
 ###
 
-#grid.to_csv(path+"/pre_panel.csv", index=False)
+#hazard_dissolve_anyhazard = hazard_polygons.buffer(0)
+#hazard_dissolve_anyhazard = gpd.GeoDataFrame(hazard_polygons, crs="epsg:4326", geometry=hazard_dissolve_anyhazard)
+#hazard_dissolve_anyhazard = hazard_dissolve_anyhazard.dissolve(by="country")
+#hazard_dissolve.to_file(path+"/hazard_dissolve.geojson", driver="GeoJSON")
 
-gdf = gdf[["cell_id", "lon", "lat", "pct_area", "geometry"]]
+#geom_p1 = [ shape(feat) for feat in gdf["geometry"]]
+#geom_p2 = [ shape(feat) for feat in hazard_dissolve_anyhazard["geometry"]]
 
-#gdf.to_file(path+"/empty_grid_afg.geojson", driver="GeoJSON")
+#g2 = geom_p2[0]
+#g1_area = geom_p1[0].area
 
-gdf = gdf.loc[gdf["pct_area"]>0, : ]
+#pct_covered = []
 
-gdf.to_file(out_path+"/empty_grid_afg_trimmed.geojson", driver="GeoJSON")
-gdf.drop(["geometry"], axis=1).to_csv(out_path+"/empty_grid_afg_trimmed.csv", index=False)
+#for i, g1 in enumerate(geom_p1):
+#    a = (g1.intersection(g2).area/g1_area) * 100
+#    pct_covered = pct_covered + [a]
 
+#gdf["pct_area_anyhazard"] = pct_covered
 
+##########
 
+gdf = gdf.loc[gdf["pct_area_mined"]>0, : ]
 
+#gdf = gdf[["cell_id", "lon", "lat", "pct_area_mined", "pct_area_anyhazard", "geometry"]]
+gdf = gdf[["cell_id", "lon", "lat", "pct_area_mined", "geometry"]]
 
+gdf.to_file(out_path+"/empty_grid_1km.geojson", driver="GeoJSON")
+#gdf.drop(["geometry"], axis=1).to_csv(out_path+"/empty_grid_afg.csv", index=False)
 
-
-
-
-
-
-
-#gdf.to_file(path+"/temp.geojson", driver="GeoJSON")
 
 
 

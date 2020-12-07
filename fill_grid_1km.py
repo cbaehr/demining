@@ -1,6 +1,6 @@
 
 path = "/Users/christianbaehr/Box Sync/demining/inputData"
-out_path = "/sciclone/scr20/cbaehr/demining"
+#out_path = "/sciclone/scr20/cbaehr/demining"
 
 import fiona
 import geopandas as gpd
@@ -11,9 +11,9 @@ from rasterstats import zonal_stats
 import numpy as np
 
 
-empty_grid = gpd.read_file(path+"/empty_grid_afg_trimmed.geojson")
-
-###
+empty_grid = gpd.read_file(path+"/empty_grid_1km.geojson")
+#empty_grid=empty_grid.sample(1000)
+empty_grid.reset_index(drop=True, inplace=True)
 
 grid = empty_grid
 
@@ -26,18 +26,23 @@ grid = empty_grid
 #del coords_geom
 
 adm = gpd.read_file(path+"/gadm36_AFG_2.geojson")
+adm = adm[["GID_1", "NAME_1", "GID_2", "NAME_2", "geometry"]]
 
-temp = gpd.sjoin(grid, adm)
-temp = temp[["cell_id", "GID_1", "NAME_1", "GID_2", "NAME_2"]]
+grid = gpd.sjoin(grid, adm, how="left")
+grid = grid[~grid.index.duplicated(keep="first")]
 
-idx = temp["cell_id"].duplicated()*1
-temp = temp.loc[idx==0, : ]
+grid.drop(["index_right"], axis=1, inplace=True)
 
-grid = grid.merge(temp, how="left", on="cell_id")
+#temp = temp[["cell_id", "GID_1", "NAME_1", "GID_2", "NAME_2"]]
 
-grid.drop(grid[grid.NAME_2.isnull()].index, inplace=True)
+#idx = temp["cell_id"].duplicated()*1
+#temp = temp.loc[idx==0, : ]
 
-grid.reset_index(drop=True, inplace=True)
+#grid = grid.merge(temp, how="left", on="cell_id")
+
+#grid.drop(grid[grid.NAME_2.isnull()].index, inplace=True)
+
+#grid.reset_index(drop=True, inplace=True)
 
 coords = [(x,y) for x, y in zip(grid.lon, grid.lat)]
 
@@ -121,6 +126,24 @@ grid = pd.concat([grid, tc9], axis=1)
 
 ###
 
+ucdp = gpd.read_file(path+"/ucdp_afghanistan.geojson")
+
+for i in range(1992, 2020):
+	ucdp_temp = ucdp.loc[ucdp["year"]==i, :]
+	events = gpd.sjoin(grid, ucdp_temp, op="intersects")
+	events = events.groupby(["cell_id"], sort=False)["high"].count()
+	a= grid.merge(events, left_on="cell_id", right_index=True, how="left")
+	a.loc[pd.isnull(a["high"]), "high"] = 0
+	a.rename({"high":"ucdp_events"+str(i)}, axis=1, inplace=True)
+	grid=a
+
+
+
+
+
+
+###
+
 for i in [2000, 2005, 2010, 2015, 2020]:
 	count_ras = rasterio.open(path+"/pop/pop_count/gpw_popcount_resample_"+str(i)+".tif")
 	count_col = [j[0] for j in count_ras.sample(coords)]
@@ -140,7 +163,7 @@ grid = pd.concat([grid, b], axis=1)
 
 # Kabul coords 34.535169, 69.171300
 
-grid = pd.read_csv(path+"/pre_panel.csv")
+#grid = pd.read_csv(path+"/pre_panel.csv")
 
 
 distance_to_kabul = np.sqrt(((grid["lon"]-69.171300)**2 + (grid["lat"]- 34.535169)**2))
@@ -149,18 +172,18 @@ grid["distance_to_kabul"] = distance_to_kabul_km
 
 ###
 
+grid["cleared_pre2008"] = (grid["ha_count2007"]==0)*1
+
 #grid = pd.read_csv(path+"/pre_panel.csv")
 
 ###
 
-grid.drop(["geometry"], axis=1).to_csv(path+"/pre_panel.csv", index=False)
+grid.drop(["geometry"], axis=1).to_csv(path+"/pre_panel_1km.csv", index=False)
+grid.to_file("/Users/christianbaehr/Downloads/pre_panel.geojson", driver="GeoJSON")
 
 #grid.to_csv(path+"/pre_panel.csv", index=False)
 
 ###
-
-temp = grid.sample(100)
-temp.to_file("/Users/christianbaehr/Downloads/temp.geojson", driver="GeoJSON")
 
 #schema = gpd.io.file.infer_schema(test)
 #schema["properties"]["Status_Cha"] = "datetime"

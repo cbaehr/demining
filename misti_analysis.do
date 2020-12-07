@@ -17,8 +17,9 @@ egen province_wave = group(wave province_id)
 *egen province_year = group(survey_year province_id)
 
 
-drop if ha_count2012==0
+* drop if ha_count2012==0
 
+gen cleared_since_2012 = (ha_count2012 - ha_count)
 
 gen absorb_temp = 1
 
@@ -254,7 +255,37 @@ outreg2 using "$results/misti_q33.doc", append noni nocons addtext("Year FEs", N
 
 rm "$results/misti_q33.txt"
 
+***
 
+reghdfe govtrust_super_index all_cleared [aw=pct_area], absorb(absorb_temp) cluster(district_id wave)
+outreg2 using "$results/misti_govtrust_super_index.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N, "Wave*Province FEs", N) nonotes addnote(Robust standard errors in parentheses. *** p<0.01 ** p<0.05 * p<0.1)
+
+reghdfe govtrust_super_index all_cleared [aw=pct_area], absorb(survey_year) cluster(district_id wave)
+outreg2 using "$results/misti_govtrust_super_index.doc", append noni nocons addtext("Year FEs", Y, "Village FEs", N, "Wave*Province FEs", N)
+
+reghdfe govtrust_super_index all_cleared [aw=pct_area], absorb(survey_year village_id) cluster(district_id wave)
+outreg2 using "$results/misti_govtrust_super_index.doc", append noni nocons addtext("Year FEs", Y, "Village FEs", Y, "Wave*Province FEs", N)
+
+reghdfe govtrust_super_index all_cleared [aw=pct_area], absorb(village_id province_wave) cluster(district_id wave)
+outreg2 using "$results/misti_govtrust_super_index.doc", append noni nocons addtext("Year FEs", N, "Village FEs", Y, "Wave*Province FEs", Y)
+
+rm "$results/misti_govtrust_super_index.txt"
+
+***
+
+reghdfe security_super_index all_cleared [aw=pct_area], absorb(absorb_temp) cluster(district_id wave)
+outreg2 using "$results/misti_security_super_index.doc", replace noni nocons addtext("Year FEs", N, "Village FEs", N, "Wave*Province FEs", N) nonotes addnote(Robust standard errors in parentheses. *** p<0.01 ** p<0.05 * p<0.1)
+
+reghdfe security_super_index all_cleared [aw=pct_area], absorb(survey_year) cluster(district_id wave)
+outreg2 using "$results/misti_security_super_index.doc", append noni nocons addtext("Year FEs", Y, "Village FEs", N, "Wave*Province FEs", N)
+
+reghdfe security_super_index all_cleared [aw=pct_area], absorb(survey_year village_id) cluster(district_id wave)
+outreg2 using "$results/misti_security_super_index.doc", append noni nocons addtext("Year FEs", Y, "Village FEs", Y, "Wave*Province FEs", N)
+
+reghdfe security_super_index all_cleared [aw=pct_area], absorb(village_id province_wave) cluster(district_id wave)
+outreg2 using "$results/misti_security_super_index.doc", append noni nocons addtext("Year FEs", N, "Village FEs", Y, "Wave*Province FEs", Y)
+
+rm "$results/misti_security_super_index.txt"
 
 
 
