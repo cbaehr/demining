@@ -4,6 +4,11 @@ global results "/Users/christianbaehr/Box Sync/demining/Results"
 
 use "$data/misti_panel_formatted", clear
 
+*preserve
+*drop if ha_count_1km_1992==0
+*sample 25
+*save "$data/misti_panel_formatted_sample", replace
+*restore
 
 *egen district_id = group(m21)
 egen province_id = group(m6)

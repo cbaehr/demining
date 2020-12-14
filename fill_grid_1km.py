@@ -161,6 +161,14 @@ grid = pd.concat([grid, b], axis=1)
 
 ###
 
+for i in [1990, 2000, 2015]:
+	a = zonal_stats(grid, path+"/ghs_"+str(i)+"_resampled.tif", stats=["mean"])
+	b = pd.DataFrame(a)
+	b.columns = ["ghs_"+str(i)]
+	grid = pd.concat([grid, b], axis=1)
+
+###
+
 # Kabul coords 34.535169, 69.171300
 
 #grid = pd.read_csv(path+"/pre_panel.csv")
@@ -173,6 +181,14 @@ grid["distance_to_kabul"] = distance_to_kabul_km
 ###
 
 grid["cleared_pre2008"] = (grid["ha_count2007"]==0)*1
+
+###
+
+for i in [1990, 2000, 2015]:
+	a = zonal_stats(grid, path+"/ghs_"+str(i)+"_resampled.tif", stats=["mean"])
+	b = pd.DataFrame(a)
+	b.columns = ["ghs_"+str(i)]
+	grid = pd.concat([grid, b], axis=1)
 
 #grid = pd.read_csv(path+"/pre_panel.csv")
 
