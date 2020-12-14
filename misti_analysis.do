@@ -1,8 +1,18 @@
+local user = "r"
 
-global data "/Users/christianbaehr/Box Sync/demining/inputData"
-global results "/Users/christianbaehr/Box Sync/demining/Results"
+if "`user'" == "c" {
+	global data "/Users/christianbaehr/Box Sync/demining/inputData/"
+	global mistidata "${data}/misti/"
+	global results "/Users/christianbaehr/Box Sync/demining/Results"
+}
+if "`user'" == "r" {
+	global data "C:\Users\rcsayers\Box\demining\inputData\"
+	global mistidata "${data}misti\"
+	global results "C:\Users\rcsayers\Box\demining\Results\"
+}
 
-use "$data/misti_panel_formatted", clear
+cd "$data"
+use "misti_panel_formatted", clear
 
 *preserve
 *drop if ha_count_1km_1992==0
