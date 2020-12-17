@@ -4,7 +4,7 @@
 Declare file paths
 *******************************************************************************/
 
-local user = "r"
+local user = "c"
 
 if "`user'" == "c" {
 	global data "/Users/christianbaehr/Box Sync/demining/inputData/"
@@ -27,7 +27,7 @@ Load data
 *******************************************************************************/
 
 cd "${data}"
-use "misti_panel_formatted_sample.dta", clear
+use "misti_panel_formatted.dta", clear
 
 /*******************************************************************************
 Generate variables for fixed effects
@@ -191,8 +191,8 @@ local fes = "district_wave"
 local radiuslist = "1"
 foreach radius of local radiuslist {
     foreach rhsvar of local rhsvarlist {
-	    reghdfe `rhsvar' treated_`radius'km [aw=weight`radius'km], absorb(`fes') cluster(district_id) if sample_`radius'km == 1
-	}""
+	    reghdfe `rhsvar' treated_`radius'km [aw=weight_`radius'km] if sample_`radius'km == 1, absorb(`fes') cluster(district_id)
+	}
 }
 /*******************************************************************************
 Generate running variable
@@ -211,5 +211,6 @@ foreach radius of local radiuslist {
 	gen treat_`radius'kmdays = word("`daysbefore'", treat_`radius'km_month)
 	destring treat_`radius'kmdays, replace
 	gen running_`radius'km_days = 365*(inter_year-treat_`radius'km_year)+(interdays-treat_`radius'kmdays)+(inter_day-treat_`radius'km_day)
+	drop interdays
 }
 
