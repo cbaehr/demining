@@ -319,7 +319,6 @@ foreach radius of local radiuslist {
 			outreg2 using "misti_rd_`lhsvar'_bywave.doc", append noni nocons addtext("District*Wave FEs", N, "Village FEs", N, "Bandwidth", `bw', "Wave", `wave') nonotes addnote(`label_`lhsvar'')
 			drop sample_`radius'km_wave`wave'
 		}
-		stop
 		//manually chosen
 		/*
 		foreach bandwidth of local bandwidthlist { 
