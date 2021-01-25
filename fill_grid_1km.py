@@ -205,12 +205,50 @@ grid.to_file("/Users/christianbaehr/Downloads/pre_panel.geojson", driver="GeoJSO
 #schema["properties"]["Status_Cha"] = "datetime"
 #test.to_file(path+"/grid_afg_test.geojson", driver="GeoJSON", schema=schema)
 
+########################################################################
 
 
+path = "/Users/christianbaehr/Box Sync/demining/inputData"
+#out_path = "/sciclone/scr20/cbaehr/demining"
+
+import fiona
+import geopandas as gpd
+import rasterio
+import pandas as pd
+from shapely.geometry import Point, shape
+from rasterstats import zonal_stats
+import numpy as np
 
 
+empty_grid = gpd.read_file(path+"/empty_grid_1km.geojson")
+#empty_grid=empty_grid.sample(1000)
+empty_grid.reset_index(drop=True, inplace=True)
 
+grid = empty_grid
 
+###
+
+hazard_polygons = gpd.read_file(path+"/hazard_polygons.geojson")
+hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Typ"].isin(["MineField", "Suspected Minefield", "Converted From SHA"]), :]
+hazard_polygons = hazard_polygons.loc[hazard_polygons["Hazard_Cla"].isin(["CHA", "SHA"]), : ]
+#hazard_polygons["Status_Cha"] = pd.to_datetime(hazard_polygons["Status_Cha"], format="%Y-%m-%d")
+hazard_polygons = hazard_polygons[["OBJECTID", "Status_1", "Status_Cha", "Status_C_1", "Hazard_Cla", "Waters", "Roads", "Mines", "Historical", "Housing", "Infrastruc", "Agricultur", "Grazing", "geometry"]]
+#hazard_polygons["hazard_area"] = hazard_polygons["geometry"].area
+
+###
+
+blockages = {"Waters":"Water", "Roads":"Road", "Mines":"Mines", "Historical":"Historical", "Housing":"Housing", "Infrastruc":"Infrastructure", "Agricultur":"Agriculture", "Grazing":"Grazing"}
+
+for i in blockages:
+	temp = hazard_polygons.loc[hazard_polygons[i]==blockages[i], :]
+	trt = gpd.sjoin(grid, temp, how="left", op="intersects")
+	trt.drop_duplicates(["cell_id"], inplace=True)
+	grid[blockages[i]] = ~pd.isnull(trt[i])*1
+
+pre_panel = pd.read_csv(path+"/pre_panel_1km_updated.csv")
+
+pre_panel = pd.concat([pre_panel, grid.reset_index(drop=True)[[blockages[i] for i in blockages]]], axis=1)
+pre_panel.to_csv(path+"/pre_panel_1km_updated.csv", index=False)
 
 
 

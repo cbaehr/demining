@@ -4,12 +4,12 @@
 Declare file paths
 *******************************************************************************/
 
-local user = "r"
+local user = "c"
 
 if "`user'" == "c" {
 	global data "/Users/christianbaehr/Box Sync/demining/inputData/"
 	global mistidata "${data}/misti/"
-	global results "/Users/christianbaehr/Box Sync/deminingResults/"
+	global results "/Users/christianbaehr/Box Sync/demining/Results/"
 }
 if "`user'" == "r" {
 	global data "C:\Users\rcsayers\Box\demining\inputData\"
@@ -29,7 +29,7 @@ Load data
 *******************************************************************************/
 
 cd "${data}"
-use "misti_panel_formatted_sample.dta", clear
+use "misti_panel_formatted.dta", clear
 
 /*******************************************************************************
 Generate variables for fixed effects

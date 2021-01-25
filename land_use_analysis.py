@@ -1,8 +1,8 @@
 
-#path = "/Users/christianbaehr/Box Sync/demining/inputData"
-#out_path = "/Users/christianbaehr/Box Sync/demining/inputData"
-path = "/sciclone/home20/cbaehr/demining/inputData"
-out_path = "/sciclone/scr20/cbaehr/demining"
+path = "/Users/christianbaehr/Box Sync/demining/inputData"
+out_path = "/Users/christianbaehr/Box Sync/demining/inputData"
+#path = "/sciclone/home20/cbaehr/demining/inputData"
+#out_path = "/sciclone/scr20/cbaehr/demining"
 
 import itertools
 import rasterio
@@ -50,7 +50,7 @@ gdf.reset_index(inplace=True, drop=True)
 
 gdf["cell_id"] = gdf.index+1
 
-gdf.to_file(out_path+"/land_use_grid.geojson", driver="GeoJSON")
+gdf.to_file(out_path+"/land_use_grid_hazardlevel.geojson", driver="GeoJSON")
 
 ############################################################
 
@@ -97,7 +97,9 @@ cond=all_cells.Shape_Leng.isnull()
 
 main_cells = all_cells.loc[~cond, :]
 
-main_cells.to_file("/Users/christianbaehr/Downloads/test.geojson", driver="GeoJSON")
+main_cells.to_file("/Users/christianbaehr/Downloads/landuse_grid_hazardlevel.geojson", driver="GeoJSON")
+
+graps = sklurg
 
 ############################################################
 

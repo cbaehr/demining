@@ -4,11 +4,10 @@ global data "/Users/christianbaehr/Box Sync/demining/inputData"
 global results "/Users/christianbaehr/Box Sync/demining/Results"
 
 *import delimited "$data/pre_panel_1km.csv", clear
-import delimited "$data/pre_panel_1km_updated.csv", clear
+import delimited "/Users/christianbaehr/Desktop/pre_panel_1km_updated.csv", clear
 
 * drop IHAs
 reshape long ntl popcount popdensity ha_count area_cleared ucdp_events builtup entry_cost network_cost exit_cost, i(cell_id) j(year)
-
 
 * drop if year==2014 | (year>2015 & year<2020)
 
@@ -77,22 +76,13 @@ label var distance_to_road "Distance to year-round road"
 label var distance_to_kabul "Distance to Kabul"
 label var ntl "Nighttime light"
 label var ucdp_events "Conflict events"
-label var water "Water blockages"
-label var road "Road blockages"
-label var mines "Mine blockages"
-label var historical "Historical blockages"
-label var housing "Housing blockages"
-label var infrastructure "Infra. blockages"
-label var agriculture "Agriculture blockages"
-label var grazing "Grazing blockages"
 
 
-
-*gen treatment_q1 = ()
+gen treatment_q1 = ()
 
 
 ***Part 2: using outreg
-global DESCVARS pct_area_mined total_ha popcount distance_to_road distance_to_kabul ntl ucdp_events water road mines historical housing infrastructure agriculture grazing
+global DESCVARS pct_area_mined total_ha popcount distance_to_road distance_to_kabul ntl ucdp_events
 mata: mata clear
 
 * First test of differences
@@ -201,7 +191,7 @@ reghdfe ntl all_cleared [aw=pct_area_mined] if last_clearance_year<2008, absorb(
 outreg2 using "$results/main_models_ntl_pre2008clearance.doc", append tex noni nocons ctitle(NTL) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
 
 reghdfe ntl all_cleared [aw=pct_area_mined] if last_clearance_year<2008, absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_ntl_pre2008clearance.doc", append tex noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+outreg2 using "$results/main_models_ntl_pre2008clearance.doc", replace tex noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
 reghdfe ntl c.all_cleared##c.distance_to_road  [aw=pct_area_mined] if last_clearance_year<2008, absorb(cell_id year_province) cluster(district_id year)
 outreg2 using "$results/main_models_ntl_pre2008clearance.doc", append tex noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
@@ -232,7 +222,7 @@ reghdfe ntl all_cleared [aw=pct_area_mined] if last_clearance_year>=2008, absorb
 outreg2 using "$results/main_models_ntl_post2008clearance.doc", append tex noni nocons ctitle(NTL) addtext("Year FEs", Y, "Grid cell FEs", Y, "Year*Prov. FEs", N)
 
 reghdfe ntl all_cleared [aw=pct_area_mined] if last_clearance_year>=2008, absorb(cell_id year_province) cluster(district_id year)
-outreg2 using "$results/main_models_ntl_post2008clearance.doc", append tex noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
+outreg2 using "$results/main_models_ntl_post2008clearance.doc", replace tex noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
 
 reghdfe ntl c.all_cleared##c.distance_to_road  [aw=pct_area_mined] if last_clearance_year>=2008, absorb(cell_id year_province) cluster(district_id year)
 outreg2 using "$results/main_models_ntl_post2008clearance.doc", append tex noni nocons ctitle(NTL) addtext("Year FEs", N, "Grid cell FEs", Y, "Year*Prov. FEs", Y)
