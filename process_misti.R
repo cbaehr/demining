@@ -93,7 +93,6 @@ wave2_geo$unique_id <- paste("Wave 2", wave2_geo$m1)
 
 wave2_geo <- wave2_geo[, c("unique_id", "m24a", "m24b", "m11")]
 
-
 wave2_merge <- merge(dat, wave2_geo, by="unique_id")
 
 ###

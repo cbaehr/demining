@@ -1,10 +1,12 @@
 
 
-global data "/Users/christianbaehr/Box Sync/demining/inputData"
-global results "/Users/christianbaehr/Box Sync/demining/Results"
+*global data "/Users/christianbaehr/Box Sync/demining/inputData"
+global data "/Users/christianbaehr/Downloads"
+*global results "/Users/christianbaehr/Box Sync/demining/Results"
 
 *import delimited "$data/pre_panel_1km.csv", clear
 import delimited "$data/pre_panel_1km_updated.csv", clear
+
 
 * drop IHAs
 reshape long ntl popcount popdensity ha_count area_cleared ucdp_events builtup entry_cost network_cost exit_cost, i(cell_id) j(year)
@@ -61,9 +63,11 @@ gen sample2_b = (last_clearance_year>=2011 & last_clearance_year<=2013)
 
 gen absorb_temp=1
 
+stop
+
 *export delimited "$data/panel.csv", replace
 
-outreg2 using "$results/summary_statistics_1km.doc", replace tex sum(log)
+outreg2 using "$results/summary_statistics_1km.doc", replace sum(log)
 rm "$results/summary_statistics_1km.txt"
 
 ***************************************************************
@@ -427,6 +431,20 @@ drop cell_id gid_1 name_1 gid_2 name_2
 ds district_id year popcount baseline_pop ha_count total_ha, not
 collapse (mean) `r(varlist)' (sum) popcount baseline_pop ha_count total_ha, by(district_id year)
 
+
+***
+
+*drop cell_id gid_1 name_1 district_id name_2 
+*ds gid_2 year popcount baseline_pop ha_count total_ha, not
+*collapse (mean) `r(varlist)' (sum) popcount baseline_pop ha_count total_ha, by(gid_2 year)
+*ds gid_2 year, not
+*reshape wide `r(varlist)', i(gid_2) j(year)
+*export delimited "/Users/christianbaehr/Downloads/panel_1km_district.csv", replace
+
+***
+
+
+
 replace all_cleared = (all_cleared==1)
 
 su
@@ -554,15 +572,6 @@ reghdfe ntl network_cost, absorb(cell_id year) cluster(district_id year)
 outreg2 using "$results/market_access.doc", append noni nocons addtext("Year FEs", Y, "Grid cell FEs", Y)
 
 
-
-
-
-
-
-
-
-
-
 ***
 
 collapse (mean) ntl popcount popdensity all_cleared, by(year cleared_by_2013)
@@ -578,6 +587,77 @@ twoway (connect ntl year if cleared_by_2013==1 & year<=2013) (connect ntl year i
 *twoway connect ntl year
 *twoway connect popcount year
 *twoway connect popdensity year
+
+
+
+***
+
+egen mean_pop = mean(popcount) if year==2000, by(last_clearance_year)
+
+*twoway scatter popcount last_clearance_year if year==2020
+twoway scatter mean_pop last_clearance_year if year==2000
+graph export "/Users/christianbaehr/Desktop/clearance_pop_correlation.png", replace
+
+
+
+
+egen mean_disttoroad = mean(distance_to_road), by(last_clearance_year)
+
+egen num_obs = count(distance_to_road), by(last_clearance_year)
+
+*twoway scatter popcount last_clearance_year if year==2020
+twoway bar num_obs last_clearance_year if year==2000 & !missing(last_clearance_year), yaxis(2) fcolor(blue*0.25) color(blue*0.25) || scatter mean_disttoroad last_clearance_year if year==2000, yaxis(1) yscale(alt axis(1)) yscale(alt axis(2)) ytitle("Avg. distance to road (km)", axis(1)) ytitle("N", axis(2)) legend(order(2 "Avg. distance" 1 "N"))
+
+graph export "/Users/christianbaehr/Desktop/clearance_disttoroad_correlation.png", replace
+
+corr last_clearance_year popcount distance_to_road if year==2000
+
+***
+
+egen test = group (last_clearance_year year)
+
+egen mean_ntl = mean(ntl), by(test)
+
+
+su mean_ntl
+
+*egen mean_ntl = mean(ntl), by(last_clearance_year)
+
+*egen mean_ntl_2 = mean(mean_ntl), by(year)
+
+su last_clearance_year
+
+sort year
+
+label variable mean_ntl "Avg. Nighttime Lights"
+label variable year "Year"
+label variable last_clearance_year "year of clearance completion"
+
+
+twoway line mean_ntl year if year<1996, by(last_clearance_year)
+*xlabel(Year) ylabel(Avg. Nighttime Lights)
+graph export "/Users/christianbaehr/Desktop/ntl_pretrends1.png", replace
+
+
+
+twoway line mean_ntl year if year<2010 & last_clearance_year>=2010 & last_clearance_year<=2016, by(last_clearance_year)
+*xlabel(Year) ylabel(Avg. Nighttime Lights)
+
+graph export "/Users/christianbaehr/Desktop/ntl_pretrends2.png", replace
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
